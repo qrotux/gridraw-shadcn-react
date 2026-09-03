@@ -1,0 +1,15 @@
+{
+  "extends": "../tsconfig.json",
+  "compilerOptions": {
+    // Examples import the package the way a consumer does; the paths resolve
+    // those specifiers to the live sources, so a breaking API change fails
+    // typecheck here instead of silently rotting the examples.
+    "baseUrl": "..",
+    "paths": {
+      "@qrotux/gridraw-shadcn-react": ["src/index.ts"],
+      "@qrotux/gridraw-shadcn-react/core": ["src/core/index.ts"],
+      "@qrotux/gridraw-shadcn-react/react-router": ["src/react-router.ts"]
+    }
+  },
+  "include": ["."]
+}
