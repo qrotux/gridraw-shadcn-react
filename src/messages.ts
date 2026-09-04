@@ -28,6 +28,7 @@ export type GridMessages = {
   cancel: string;
   editClauseAria: string;
   removeClauseAria: string;
+  removeValue: string;
   filter: string;
   or: string;
   columns: string;
@@ -59,6 +60,7 @@ export const defaultGridMessages: Required<GridMessages> = {
   cancel: "Cancel",
   editClauseAria: "Edit condition",
   removeClauseAria: "Remove condition",
+  removeValue: "Remove value",
   filter: "+ Filter",
   or: "OR",
   columns: "Columns",

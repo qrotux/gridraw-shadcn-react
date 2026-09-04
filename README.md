@@ -183,8 +183,30 @@ without a router.
 }
 ```
 
-Column types: `string`, `number`, `boolean`, `enum`, `datetime`, `json`.
-Operators: `eq`, `contains`, `starts`, `gte`, `lte`, `between`, `in`.
+Column types: `string`, `uuid`, `number`, `decimal`, `boolean`, `enum`, `date`,
+`time`, `datetime`, `json`. A column may also set `"array": true`, making its
+`type` the element type. `time` and `datetime` carry a `step` (seconds,
+default 1); `filter.widget` is an optional UI hint for a multi-value enum
+column: `checkboxes` (the default) for a checkbox list, `tags` for a
+select-style dropdown that autocompletes over the enum values (picks shown as
+chips), or `combobox` for the same control with the values offered as
+suggestions but free entry allowed. Unknown values fall back to the checkbox
+list.
+
+Operators: `eq`, `neq`, `contains`, `notContains`, `starts`, `ends`, `gt`,
+`gte`, `lt`, `lte`, `between`, `notBetween`, `in`, `notIn`, the value-less
+`isNull` / `isNotNull` / `isEmpty` / `isNotEmpty`, and the array operators
+`containsAny` / `containsAll` / `containsOnly` / `notContainsAny`. The filter panel renders an
+input for every scalar type and for `between`/`notBetween`, `in`/`notIn` and
+the value-less operators. Multi-value operators use a checkbox list on enum
+columns by default, a `tags`/`combobox` autocomplete when the column asks for
+it (see `filter.widget`), and free tag entry on columns with no enum values
+(for example `in`/`notIn` on `uuid`, or a non-enum array's `containsAny`).
+Array columns render each element in the cell
+and take their values as tags, typed per element (numbers as numbers, other
+element types as strings). `time` and `datetime` use native pickers whose
+granularity follows the column's `step`.
+
 `search` is `null` when the grid has no quick search; otherwise it lists the
 titles of the searched columns for the placeholder.
 
@@ -205,16 +227,24 @@ titles of the searched columns for the placeholder.
 ```
 
 `filters` is in disjunctive normal form: the outer array is OR, each inner
-array is AND. Values are typed per column: strings for `string` and `enum`,
-numbers for `number`, booleans for `boolean`, RFC 3339 strings for
-`datetime`, `[a, b]` for `between`, `string[]` for `in`. Empty `sort` means
-the server default. The response is:
+array is AND. Values are typed per column: strings for `string`, `uuid` and
+`enum`, numbers for `number`, decimal strings such as `"19.99"` for `decimal`,
+booleans for `boolean`, `YYYY-MM-DD` for `date`, `HH:MM:SS` for `time`, RFC
+3339 strings for `datetime`, `[a, b]` for `between`/`notBetween`, and an array
+of element values for `in`/`notIn` and the array operators (`string[]`, or
+`number[]` for a number column). The value-less operators
+(`isNull`, `isNotNull`, `isEmpty`, `isNotEmpty`) carry no value (the client
+sends `null`). Empty `sort` means the server default. The response is:
 
 ```json
 { "rows": [{ "email": "a@x", "role": "admin", "id": "..." }], "total": 1 }
 ```
 
-`datetime` values arrive as RFC 3339 strings, `json` values as parsed JSON.
+Row values arrive typed: `uuid` as a lowercase string, `number` as a JSON
+number, `decimal` as a string with its stored scale (`"4.10"`), `date` as
+`YYYY-MM-DD`, `time` as `HH:MM:SS`, `datetime` as an RFC 3339 string, `json`
+as parsed JSON, array columns as JSON arrays of the element form, and NULL as
+`null`.
 
 ## Development
 

@@ -3,9 +3,46 @@ import type * as React from "react";
 // Protocol vocabularies as const arrays: the types derive from them, and tests
 // use the same arrays for runtime membership checks (resolveJsonModule widens
 // string literals in imported JSON fixtures to string).
-export const COL_TYPES = ["string", "number", "boolean", "enum", "datetime", "json"] as const;
+export const COL_TYPES = [
+  "string",
+  "uuid",
+  "number",
+  "decimal",
+  "boolean",
+  "enum",
+  "date",
+  "time",
+  "datetime",
+  "json",
+] as const;
 export type ColType = (typeof COL_TYPES)[number];
-export const FILTER_OPS = ["eq", "contains", "starts", "gte", "lte", "between", "in"] as const;
+// Scalar operators, then the value-less pair, then the array operators. The
+// server sends the array operators only on array columns; scalar columns never
+// mix them in.
+export const FILTER_OPS = [
+  "eq",
+  "neq",
+  "contains",
+  "notContains",
+  "starts",
+  "ends",
+  "gt",
+  "gte",
+  "lt",
+  "lte",
+  "between",
+  "notBetween",
+  "in",
+  "notIn",
+  "isNull",
+  "isNotNull",
+  "containsAny",
+  "containsAll",
+  "containsOnly",
+  "notContainsAny",
+  "isEmpty",
+  "isNotEmpty",
+] as const;
 export type FilterOp = (typeof FILTER_OPS)[number];
 export const SORT_DIRS = ["asc", "desc"] as const;
 export type SortDir = (typeof SORT_DIRS)[number];
@@ -13,7 +50,13 @@ export type SortDir = (typeof SORT_DIRS)[number];
 export type SortSpec = { column: string; dir: SortDir };
 export type OpDesc = { op: FilterOp; label: string };
 export type EnumValue = { value: string; label: string };
-export type FilterDesc = { operators: OpDesc[]; enumValues?: EnumValue[] };
+export type FilterDesc = {
+  operators: OpDesc[];
+  enumValues?: EnumValue[];
+  /** UI hint for the filter input ("checkboxes", "tags", or a client-defined
+   *  value); absent when unset. Consumed by array/enum inputs, not yet here. */
+  widget?: string;
+};
 
 export type GridColumn = {
   key: string;
@@ -21,6 +64,12 @@ export type GridColumn = {
   title: string;
   sortable: boolean;
   defaultVisible: boolean;
+  /** Array of `type` elements; the element type is `type` itself. Array columns
+   *  carry the array operators instead of the scalar ones. */
+  array?: boolean;
+  /** Resolution in seconds of a time/datetime column (default 1); the server
+   *  publishes it so the UI can drop the seconds field or offer coarse slots. */
+  step?: number;
   filter?: FilterDesc;
 };
 

@@ -1,13 +1,19 @@
 import * as React from "react";
-import { X } from "lucide-react";
+import { ChevronsUpDown, X } from "lucide-react";
 
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Checkbox } from "./ui/checkbox";
 import { cn } from "./ui/cn";
 
+import { formatTemporal } from "./format";
 import { useGridI18n, type GridMessages } from "./messages";
-import type { FilterClause, FilterOp, GridColumn } from "./core/types";
+import type { EnumValue, FilterClause, FilterOp, GridColumn } from "./core/types";
+
+// filter.widget values this panel understands for multi-value enum columns.
+// Anything else (including the absent default) uses the checkbox list.
+const WIDGET_TAGS = "tags"; // autocomplete restricted to the enum values
+const WIDGET_COMBOBOX = "combobox"; // enum values as suggestions, free entry allowed
 
 // ---------------------------------------------------------------------------
 // label helpers (used by chips)
@@ -34,10 +40,39 @@ function formatScalar(
   column: GridColumn | undefined,
   value: unknown,
   messages: Required<GridMessages>,
+  locale: string,
 ): string {
   if (column?.type === "enum") return enumLabel(column, value);
   if (column?.type === "boolean") return value ? messages.booleanTrue : messages.booleanFalse;
-  return String(value);
+  // date/time/datetime are localized the same way as their cells (step and all);
+  // other types pass through unchanged.
+  return formatTemporal(column?.type ?? "string", value, locale, column?.step);
+}
+
+// The kind of value an operator carries. One classification drives the input
+// component, the commit guard and the chip label, so a new operator only has to
+// be listed here.
+//   none   isNull/isNotNull/isEmpty/isNotEmpty — no value
+//   range  between/notBetween — [a, b]
+//   multi  in/notIn and the array operators — an array of values
+//   scalar everything else — one value of the column type
+type OpArity = "none" | "range" | "multi" | "scalar";
+const NO_VALUE_OPS = new Set<FilterOp>(["isNull", "isNotNull", "isEmpty", "isNotEmpty"]);
+const RANGE_OPS = new Set<FilterOp>(["between", "notBetween"]);
+const MULTI_OPS = new Set<FilterOp>([
+  "in",
+  "notIn",
+  "containsAny",
+  "containsAll",
+  "containsOnly",
+  "notContainsAny",
+]);
+
+export function opArity(op: FilterOp): OpArity {
+  if (NO_VALUE_OPS.has(op)) return "none";
+  if (RANGE_OPS.has(op)) return "range";
+  if (MULTI_OPS.has(op)) return "multi";
+  return "scalar";
 }
 
 function formatValue(
@@ -45,14 +80,16 @@ function formatValue(
   op: FilterOp,
   value: unknown,
   messages: Required<GridMessages>,
+  locale: string,
 ): string {
-  if (op === "between" && Array.isArray(value)) {
-    return `${formatScalar(column, value[0], messages)} – ${formatScalar(column, value[1], messages)}`;
+  const arity = opArity(op);
+  if (arity === "range" && Array.isArray(value)) {
+    return `${formatScalar(column, value[0], messages, locale)} – ${formatScalar(column, value[1], messages, locale)}`;
   }
-  if (op === "in" && Array.isArray(value)) {
-    return value.map((v) => enumLabel(column, v)).join(", ");
+  if (arity === "multi" && Array.isArray(value)) {
+    return value.map((v) => formatScalar(column, v, messages, locale)).join(", ");
   }
-  return formatScalar(column, value, messages);
+  return formatScalar(column, value, messages, locale);
 }
 
 /** Chip text: `<Title> <opLabel> <value>`, labels resolved from the descriptor. */
@@ -60,10 +97,14 @@ export function clauseLabel(
   clause: FilterClause,
   columns: GridColumn[],
   messages: Required<GridMessages>,
+  locale: string,
 ): string {
   const column = columns.find((c) => c.key === clause.field);
   const title = column?.title ?? clause.field;
-  return `${title} ${opLabel(column, clause.op)} ${formatValue(column, clause.op, clause.value, messages)}`;
+  const label = opLabel(column, clause.op);
+  // Value-less operators (isNull, isEmpty…) print just "<Title> <op>".
+  if (opArity(clause.op) === "none") return `${title} ${label}`;
+  return `${title} ${label} ${formatValue(column, clause.op, clause.value, messages, locale)}`;
 }
 
 // ---------------------------------------------------------------------------
@@ -79,6 +120,37 @@ function TextValueInput({ value, onChange }: { value: unknown; onChange: (v: unk
       onChange={(e) => onChange(e.target.value === "" ? undefined : e.target.value)}
       placeholder={messages.value}
       className="h-8 w-40"
+    />
+  );
+}
+
+// Decimal values travel as strings ("19.99"), keeping the exact scale; a JS
+// number would lose it and the server rejects float-typed decimals. So this
+// passes the raw text through unparsed, unlike NumberValueInput.
+function DecimalValueInput({ value, onChange }: { value: unknown; onChange: (v: unknown) => void }) {
+  const { messages } = useGridI18n();
+  return (
+    <Input
+      inputMode="decimal"
+      value={typeof value === "string" ? value : ""}
+      onChange={(e) => onChange(e.target.value === "" ? undefined : e.target.value)}
+      placeholder={messages.number}
+      className="h-8 w-28"
+    />
+  );
+}
+
+// A native date picker whose value is already the "YYYY-MM-DD" wire form, so no
+// conversion is needed (unlike datetime, which round-trips through a zone).
+function DateValueInput({ value, onChange }: { value: unknown; onChange: (v: string | undefined) => void }) {
+  const { messages } = useGridI18n();
+  return (
+    <input
+      type="date"
+      value={typeof value === "string" ? value : ""}
+      onChange={(e) => onChange(e.target.value === "" ? undefined : e.target.value)}
+      className="h-8 rounded-md border border-input bg-transparent px-2 text-sm shadow-sm"
+      aria-label={messages.value}
     />
   );
 }
@@ -122,9 +194,11 @@ function isoToLocalInput(value: unknown): string {
 function DatetimeValueInput({
   value,
   onChange,
+  step,
 }: {
   value: unknown;
   onChange: (v: string | undefined) => void;
+  step?: number; // column resolution in seconds; drives the input's precision
 }) {
   const { messages } = useGridI18n();
   const [raw, setRaw] = React.useState(() => isoToLocalInput(value));
@@ -143,8 +217,34 @@ function DatetimeValueInput({
   return (
     <input
       type="datetime-local"
+      step={step}
       value={raw}
       onChange={handle}
+      className="h-8 rounded-md border border-input bg-transparent px-2 text-sm shadow-sm"
+      aria-label={messages.value}
+    />
+  );
+}
+
+// A native time picker. `step` (seconds) sets the granularity and whether the
+// seconds field appears; the input's value ("HH:MM" or "HH:MM:SS") is already
+// the wire form, so it passes through unchanged.
+function TimeValueInput({
+  value,
+  onChange,
+  step,
+}: {
+  value: unknown;
+  onChange: (v: string | undefined) => void;
+  step?: number;
+}) {
+  const { messages } = useGridI18n();
+  return (
+    <input
+      type="time"
+      step={step}
+      value={typeof value === "string" ? value : ""}
+      onChange={(e) => onChange(e.target.value === "" ? undefined : e.target.value)}
       className="h-8 rounded-md border border-input bg-transparent px-2 text-sm shadow-sm"
       aria-label={messages.value}
     />
@@ -165,6 +265,236 @@ function BooleanValueInput({ value, onChange }: { value: unknown; onChange: (v: 
       <option value="true">{messages.booleanTrue}</option>
       <option value="false">{messages.booleanFalse}</option>
     </select>
+  );
+}
+
+// Free multi-value entry for columns with no enum list (a uuid `in`, and later
+// non-enum array columns). A token is added with Enter or comma; Backspace on
+// an empty field removes the last. A half-typed token that was never added is
+// dropped, exactly as an unchecked box would be — commit only sees added ones.
+function TagValueInput({
+  value,
+  onChange,
+  parse,
+}: {
+  value: unknown;
+  onChange: (v: unknown) => void;
+  // Coerces a typed token to its wire element (e.g. a number). Returning
+  // undefined rejects the token. Defaults to the trimmed string.
+  parse?: (raw: string) => unknown;
+}) {
+  const { messages } = useGridI18n();
+  const tags = Array.isArray(value) ? (value as unknown[]) : [];
+  const [draft, setDraft] = React.useState("");
+
+  function add() {
+    const raw = draft.trim();
+    setDraft("");
+    if (!raw) return;
+    const v = parse ? parse(raw) : raw;
+    if (v === undefined || tags.some((t) => t === v)) return;
+    onChange([...tags, v]);
+  }
+
+  function removeAt(i: number) {
+    const next = tags.filter((_, j) => j !== i);
+    onChange(next.length > 0 ? next : undefined);
+  }
+
+  return (
+    <div className="flex flex-wrap items-center gap-1">
+      {tags.map((t, i) => (
+        <span
+          key={i}
+          className="inline-flex items-center gap-1 rounded-full border bg-muted px-2 py-0.5 text-xs"
+        >
+          {String(t)}
+          <button
+            type="button"
+            aria-label={messages.removeValue}
+            onClick={() => removeAt(i)}
+            className="rounded-full p-0.5 text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+          >
+            <X className="size-3" />
+          </button>
+        </span>
+      ))}
+      <Input
+        value={draft}
+        onChange={(e) => setDraft(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === ",") {
+            e.preventDefault();
+            add();
+          } else if (e.key === "Backspace" && draft === "" && tags.length > 0) {
+            removeAt(tags.length - 1);
+          }
+        }}
+        placeholder={messages.value}
+        className="h-8 w-40"
+      />
+    </div>
+  );
+}
+
+// Enum multi-value entry as a tag field with autocomplete over the enum values
+// (a `tags`/`combobox` widget hint), instead of a checkbox list. `strict` keeps
+// only values from `options`; otherwise a token matching none is kept verbatim,
+// so the options act as suggestions. Chips show the label; the wire keeps the
+// value.
+// Enum multi-value entry as a select-style combobox: selected values show as
+// chips, and typing filters a dropdown of the enum values that the user picks
+// from (mouse or keyboard). `strict` keeps only values from `options`; free
+// mode also accepts a typed value that matches none, so the options act as
+// suggestions. The dropdown is a plain inline panel, not a popover overlay.
+function EnumTagInput({
+  options,
+  value,
+  onChange,
+  strict,
+}: {
+  options: EnumValue[];
+  value: unknown;
+  onChange: (v: unknown) => void;
+  strict: boolean;
+}) {
+  const { messages } = useGridI18n();
+  // Memoized so the matches useMemo below is not invalidated every render by a
+  // fresh `[]` when value is undefined.
+  const selected = React.useMemo<string[]>(() => (Array.isArray(value) ? (value as string[]) : []), [value]);
+  const [draft, setDraft] = React.useState("");
+  const [open, setOpen] = React.useState(false);
+  const [active, setActive] = React.useState(0);
+  const rootRef = React.useRef<HTMLDivElement>(null);
+  const listId = React.useId();
+
+  const labelOf = (v: string) => options.find((o) => o.value === v)?.label ?? v;
+
+  // Unselected options whose label or value matches the current draft.
+  const matches = React.useMemo(() => {
+    const t = draft.trim().toLowerCase();
+    return options.filter(
+      (o) =>
+        !selected.includes(o.value) &&
+        (t === "" || o.label.toLowerCase().includes(t) || o.value.toLowerCase().includes(t)),
+    );
+  }, [options, selected, draft]);
+
+  // Close when focus leaves the whole control (click elsewhere).
+  React.useEffect(() => {
+    if (!open) return;
+    function onDown(e: MouseEvent) {
+      if (rootRef.current && !rootRef.current.contains(e.target as Node)) setOpen(false);
+    }
+    document.addEventListener("mousedown", onDown);
+    return () => document.removeEventListener("mousedown", onDown);
+  }, [open]);
+
+  function addValue(v: string) {
+    setDraft("");
+    setActive(0);
+    if (selected.includes(v)) return;
+    onChange([...selected, v]);
+  }
+
+  // Enter/comma: take the highlighted option, else (free mode) the typed value.
+  function commitDraft() {
+    if (matches.length > 0) {
+      addValue(matches[Math.min(active, matches.length - 1)].value);
+      return;
+    }
+    const t = draft.trim();
+    if (!strict && t !== "") addValue(t);
+  }
+
+  function removeAt(i: number) {
+    const next = selected.filter((_, j) => j !== i);
+    onChange(next.length > 0 ? next : undefined);
+  }
+
+  return (
+    <div ref={rootRef} className="relative">
+      <div className="flex min-h-8 w-56 flex-wrap items-center gap-1 rounded-md border border-input bg-transparent px-2 py-1 shadow-sm">
+        {selected.map((v, i) => (
+          <span
+            key={i}
+            className="inline-flex items-center gap-1 rounded-full border bg-muted px-2 py-0.5 text-xs"
+          >
+            {labelOf(v)}
+            <button
+              type="button"
+              aria-label={messages.removeValue}
+              onClick={() => removeAt(i)}
+              className="rounded-full p-0.5 text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+            >
+              <X className="size-3" />
+            </button>
+          </span>
+        ))}
+        <input
+          role="combobox"
+          aria-expanded={open}
+          aria-controls={listId}
+          aria-autocomplete="list"
+          value={draft}
+          placeholder={messages.value}
+          onFocus={() => setOpen(true)}
+          onChange={(e) => {
+            setDraft(e.target.value);
+            setActive(0);
+            setOpen(true);
+          }}
+          onKeyDown={(e) => {
+            if (e.key === "ArrowDown") {
+              e.preventDefault();
+              setOpen(true);
+              setActive((a) => Math.min(a + 1, matches.length - 1));
+            } else if (e.key === "ArrowUp") {
+              e.preventDefault();
+              setActive((a) => Math.max(a - 1, 0));
+            } else if (e.key === "Enter" || e.key === ",") {
+              e.preventDefault();
+              commitDraft();
+            } else if (e.key === "Escape") {
+              setOpen(false);
+            } else if (e.key === "Backspace" && draft === "" && selected.length > 0) {
+              removeAt(selected.length - 1);
+            }
+          }}
+          className="h-6 min-w-16 flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
+          aria-label={messages.value}
+        />
+        <ChevronsUpDown
+          className="size-4 shrink-0 cursor-pointer text-muted-foreground"
+          onClick={() => setOpen((o) => !o)}
+        />
+      </div>
+      {open && matches.length > 0 && (
+        <ul
+          id={listId}
+          role="listbox"
+          className="absolute z-10 mt-1 max-h-48 w-56 overflow-auto rounded-md border bg-popover p-1 shadow-md"
+        >
+          {matches.map((o, i) => (
+            <li key={o.value}>
+              <button
+                type="button"
+                role="option"
+                aria-selected={i === active}
+                onMouseEnter={() => setActive(i)}
+                onClick={() => addValue(o.value)}
+                className={cn(
+                  "w-full rounded-sm px-2 py-1 text-left text-sm",
+                  i === active ? "bg-accent text-accent-foreground" : "hover:bg-accent",
+                )}
+              >
+                {o.label}
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
   );
 }
 
@@ -210,7 +540,8 @@ function BetweenValueInput({
   onChange: (v: unknown) => void;
 }) {
   // Both sides live in local state, seeded once from `value` (ClauseEditor
-  // remounts this input via its `${field}:${op}` key). They cannot be derived
+  // remounts this input when the value shape changes, via its arity-based key).
+  // They cannot be derived
   // from the `value` prop: while only one side is filled, onChange emits
   // `undefined` every keystroke, React bails out of the parent's identical
   // setState, and no re-render brings the other side's latest entry back.
@@ -232,13 +563,27 @@ function BetweenValueInput({
     commit(a, v);
   }
 
-  const Field = column.type === "datetime" ? DatetimeValueInput : NumberValueInput;
+  // Both ends share the column's scalar input; temporal ends carry the step.
+  function field(v: unknown, on: (x: unknown) => void) {
+    switch (column.type) {
+      case "datetime":
+        return <DatetimeValueInput value={v} onChange={on} step={column.step} />;
+      case "time":
+        return <TimeValueInput value={v} onChange={on} step={column.step} />;
+      case "date":
+        return <DateValueInput value={v} onChange={on} />;
+      case "decimal":
+        return <DecimalValueInput value={v} onChange={on} />;
+      default:
+        return <NumberValueInput value={v} onChange={on} />;
+    }
+  }
 
   return (
     <div className="flex items-center gap-1">
-      <Field value={a} onChange={handleA} />
+      {field(a, handleA)}
       <span className="text-xs text-muted-foreground">–</span>
-      <Field value={b} onChange={handleB} />
+      {field(b, handleB)}
     </div>
   );
 }
@@ -255,16 +600,48 @@ function ValueInput({
   value: unknown;
   onChange: (v: unknown) => void;
 }) {
-  if (op === "between") return <BetweenValueInput column={column} value={value} onChange={onChange} />;
-  if (op === "in") return <EnumValueInput column={column} value={value} onChange={onChange} />;
+  const arity = opArity(op);
+  if (arity === "none") return null; // value-less: isNull, isEmpty…
+  if (arity === "range") return <BetweenValueInput column={column} value={value} onChange={onChange} />;
+  // multi (in/notIn, array operators): enum columns pick from a checkbox list;
+  // columns with no enum values (uuid, non-enum arrays) take free tag entry.
+  if (arity === "multi") {
+    const enumValues = column.filter?.enumValues ?? [];
+    if (enumValues.length > 0) {
+      // The widget hint chooses the enum input; the default stays checkboxes.
+      const widget = column.filter?.widget;
+      if (widget === WIDGET_TAGS)
+        return <EnumTagInput options={enumValues} value={value} onChange={onChange} strict />;
+      if (widget === WIDGET_COMBOBOX)
+        return <EnumTagInput options={enumValues} value={value} onChange={onChange} strict={false} />;
+      return <EnumValueInput column={column} value={value} onChange={onChange} />;
+    }
+    // number elements go on the wire as numbers; a non-numeric token is
+    // rejected. decimal stays a string (like the scalar decimal input).
+    const parse =
+      column.type === "number"
+        ? (raw: string) => {
+            const n = Number(raw);
+            return Number.isNaN(n) ? undefined : n;
+          }
+        : undefined;
+    return <TagValueInput value={value} onChange={onChange} parse={parse} />;
+  }
 
   switch (column.type) {
     case "number":
       return <NumberValueInput value={value} onChange={onChange} />;
+    case "decimal":
+      return <DecimalValueInput value={value} onChange={onChange} />;
     case "boolean":
       return <BooleanValueInput value={value} onChange={onChange} />;
+    case "date":
+      return <DateValueInput value={value} onChange={onChange} />;
+    case "time":
+      return <TimeValueInput value={value} onChange={onChange} step={column.step} />;
     case "datetime":
-      return <DatetimeValueInput value={value} onChange={onChange} />;
+      return <DatetimeValueInput value={value} onChange={onChange} step={column.step} />;
+    // uuid falls through to text: it is typed exactly, no picker.
     default:
       return <TextValueInput value={value} onChange={onChange} />;
   }
@@ -306,16 +683,22 @@ function ClauseEditor({
   }
 
   function selectOp(next: string) {
-    setOp(next as FilterOp);
-    setDraft(undefined);
+    const nextOp = next as FilterOp;
+    // Keep the entered value when the new operator carries the same value shape
+    // (e.g. containsAny → containsAll, or between → notBetween); reset only when
+    // the shape changes (scalar ↔ range ↔ multi ↔ value-less).
+    if (op === "" || opArity(nextOp) !== opArity(op)) setDraft(undefined);
+    setOp(nextOp);
   }
 
-  const canCommit = column !== undefined && op !== "" && draft !== undefined;
+  // Value-less operators commit without a draft; everything else needs one.
+  const noValue = op !== "" && opArity(op) === "none";
+  const canCommit = column !== undefined && op !== "" && (noValue || draft !== undefined);
 
   function commit() {
     if (column === undefined || op === "") return;
-    if (draft === undefined) return;
-    onCommit({ field: column.key, op, value: draft });
+    if (!noValue && draft === undefined) return;
+    onCommit({ field: column.key, op, value: noValue ? null : draft });
     setField("");
     setOp("");
     setDraft(undefined);
@@ -352,8 +735,14 @@ function ClauseEditor({
         </select>
       )}
 
-      {column && op !== "" && (
-        <ValueInput key={`${field}:${op}`} column={column} op={op} value={draft} onChange={setDraft} />
+      {column && op !== "" && !noValue && (
+        <ValueInput
+          key={`${field}:${opArity(op)}`}
+          column={column}
+          op={op}
+          value={draft}
+          onChange={setDraft}
+        />
       )}
 
       <Button size="sm" onClick={commit} disabled={!canCommit}>
@@ -381,7 +770,7 @@ function Chip({
   onEdit: () => void;
   onRemove: () => void;
 }) {
-  const { messages } = useGridI18n();
+  const { messages, locale } = useGridI18n();
   return (
     <span className="inline-flex items-center gap-1 rounded-full border bg-muted px-2 py-1 text-xs">
       <button
@@ -390,7 +779,7 @@ function Chip({
         onClick={onEdit}
         className="rounded hover:underline"
       >
-        {clauseLabel(clause, columns, messages)}
+        {clauseLabel(clause, columns, messages, locale)}
       </button>
       <button
         type="button"

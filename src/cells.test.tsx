@@ -96,6 +96,98 @@ describe("CellValue", () => {
     expect(enText).not.toBe(ruText);
   });
 
+  it("uuid → monospace text, value shown verbatim", () => {
+    const id = "3f2504e0-4f89-41d3-9a0c-0305e82c3301";
+    const { container } = render(<CellValue column={col({ type: "uuid" })} value={id} />);
+    const span = container.querySelector("span");
+    expect(span?.textContent).toBe(id);
+    expect(span?.className).toContain("font-mono");
+  });
+
+  it("decimal → right-aligned string, keeping the stored scale", () => {
+    const { container } = render(<CellValue column={col({ type: "decimal" })} value="4.10" />);
+    const span = container.querySelector(".tabular-nums");
+    expect(span?.textContent).toBe("4.10"); // not 4.1
+    expect(span?.className).toContain("text-right");
+  });
+
+  it("date → formatted, calendar day does not shift by time zone", () => {
+    const { container } = render(
+      <GridI18nProvider value={{ messages: defaultGridMessages, locale: "en-GB" }}>
+        <CellValue column={col({ type: "date" })} value="2026-07-31" />
+      </GridI18nProvider>,
+    );
+    const text = container.querySelector(".tabular-nums")?.textContent ?? "";
+    expect(text).toContain("31");
+    expect(text).toContain("2026");
+  });
+
+  it("time → non-empty formatted text, invalid string falls back to raw", () => {
+    const { container: ok } = render(<CellValue column={col({ type: "time" })} value="09:30:00" />);
+    expect(ok.querySelector(".tabular-nums")?.textContent).toBeTruthy();
+
+    const { container: bad } = render(<CellValue column={col({ type: "time" })} value="not-a-time" />);
+    expect(bad.querySelector(".tabular-nums")?.textContent).toBe("not-a-time");
+  });
+
+  it("time step drives second precision: step 1 shows seconds, a minute step hides them", () => {
+    const withSec = render(
+      <GridI18nProvider value={{ messages: defaultGridMessages, locale: "en-GB" }}>
+        <CellValue column={col({ type: "time", step: 1 })} value="09:30:45" />
+      </GridI18nProvider>,
+    );
+    expect(withSec.container.textContent).toContain("45");
+
+    const noSec = render(
+      <GridI18nProvider value={{ messages: defaultGridMessages, locale: "en-GB" }}>
+        <CellValue column={col({ type: "time", step: 900 })} value="09:30:45" />
+      </GridI18nProvider>,
+    );
+    expect(noSec.container.textContent).not.toContain("45");
+  });
+
+  it("string array → each element shown", () => {
+    const { container } = render(
+      <CellValue column={col({ type: "string", array: true })} value={["alpha", "beta"]} />,
+    );
+    expect(container.textContent).toContain("alpha");
+    expect(container.textContent).toContain("beta");
+  });
+
+  it("enum array → a badge per element with its label", () => {
+    render(
+      <CellValue
+        column={col({
+          type: "enum",
+          array: true,
+          filter: {
+            operators: [],
+            enumValues: [
+              { value: "en", label: "English" },
+              { value: "ru", label: "Russian" },
+            ],
+          },
+        })}
+        value={["en", "ru"]}
+      />,
+    );
+    expect(screen.getByText("English")).toBeTruthy();
+    expect(screen.getByText("Russian")).toBeTruthy();
+  });
+
+  it("number array → each number shown", () => {
+    const { container } = render(
+      <CellValue column={col({ type: "number", array: true })} value={[10, 20]} />,
+    );
+    expect(container.textContent).toContain("10");
+    expect(container.textContent).toContain("20");
+  });
+
+  it("empty array → em-dash (no data), not an empty box", () => {
+    const { container } = render(<CellValue column={col({ type: "string", array: true })} value={[]} />);
+    expect(container.textContent).toBe("—");
+  });
+
   it("json object → compact JSON, not [object Object]", () => {
     const { container } = render(
       <CellValue column={col({ type: "json" })} value={{ event: "probe", deviceCount: 1 }} />,
