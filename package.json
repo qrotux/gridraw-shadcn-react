@@ -1,6 +1,6 @@
 {
   "name": "@qrotux/gridraw-shadcn-react",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Server-driven data grid for React on shadcn/ui: descriptor-driven columns, DNF filters, multi-sort, pagination.",
   "license": "MIT",
   "engines": {

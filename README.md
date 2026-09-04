@@ -19,7 +19,7 @@ Installing straight from git also works; the `prepare` script builds `dist` on
 install.
 
 ```sh
-npm install github:qrotux/gridraw-shadcn-react#v0.1.0
+npm install github:qrotux/gridraw-shadcn-react#v0.2.0
 ```
 
 Peer dependencies: `react`, `react-dom`, `@tanstack/react-query`,
