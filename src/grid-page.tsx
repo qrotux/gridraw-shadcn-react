@@ -102,6 +102,7 @@ export function GridPage({
       .map((c) => ({
         key: c.key,
         title: c.title,
+        description: c.description,
         sortable: c.sortable,
         filterable: !!c.filter,
         render: (row: GridRow) => {
@@ -121,8 +122,15 @@ export function GridPage({
   ];
 
   const pageSize = state.pageSize ?? descriptor.pageSize;
-  const total = rowsQ.data?.total ?? 0;
-  const pageCount = Math.max(1, Math.ceil(total / pageSize));
+  // A skipTotal grid sends no total, so there is no page count and no row
+  // count to print; the flags below carry the whole of pagination there.
+  const total = rowsQ.data?.total;
+  const pageCount = total === undefined ? undefined : Math.max(1, Math.ceil(total / pageSize));
+  // A server older than the flags sends neither, so they fall back to the page
+  // arithmetic that used to drive the arrows. Without that, hasNext would read
+  // false and the grid would look like a single page.
+  const hasPrev = rowsQ.data?.hasPrev ?? state.page > 1;
+  const hasNext = rowsQ.data?.hasNext ?? (pageCount !== undefined && state.page < pageCount);
 
   return (
     <GridIdColumnProvider idColumn={descriptor.idColumn}>
@@ -166,13 +174,19 @@ export function GridPage({
               onAddFilter={(key) => filtersRef.current?.openAddGroup(key)}
               page={state.page}
               pageCount={pageCount}
+              hasPrev={hasPrev}
+              hasNext={hasNext}
               onPageChange={(page) => onStateChange({ page })}
               pageSize={pageSize}
               pageSizeOptions={descriptor.pageSizeOptions}
               onPageSizeChange={(size) => onStateChange({ pageSize: size })}
               isFetching={rowsQ.isFetching}
             />
-            <div className="text-xs text-muted-foreground">{interpolate(messages.rowsTotal, { total })}</div>
+            {total !== undefined && (
+              <div className="text-xs text-muted-foreground">
+                {interpolate(messages.rowsTotal, { total })}
+              </div>
+            )}
           </div>
         </GridUiProvider>
       </GridI18nProvider>

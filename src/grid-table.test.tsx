@@ -100,6 +100,8 @@ function renderTable(sorts: SortSpec[], onSortChange = vi.fn(), onAddFilter?: (k
       onAddFilter={onAddFilter}
       page={1}
       pageCount={1}
+      hasPrev={false}
+      hasNext={false}
       onPageChange={vi.fn()}
     />,
   );
@@ -179,6 +181,8 @@ describe("GridTable row identity (getRowId)", () => {
           onSortChange={onSortChange}
           page={1}
           pageCount={1}
+          hasPrev={false}
+          hasNext={false}
           onPageChange={onPageChange}
         />
       </GridIdColumnProvider>,
@@ -194,6 +198,8 @@ describe("GridTable row identity (getRowId)", () => {
           onSortChange={onSortChange}
           page={1}
           pageCount={1}
+          hasPrev={false}
+          hasNext={false}
           onPageChange={onPageChange}
         />
       </GridIdColumnProvider>,
@@ -240,9 +246,56 @@ describe("GridTable filter header button", () => {
         onAddFilter={vi.fn()}
         page={1}
         pageCount={1}
+        hasPrev={false}
+        hasNext={false}
         onPageChange={vi.fn()}
       />,
     );
     expect(screen.queryByRole("button", { name: "Add filter for column" })).toBeNull();
+  });
+});
+
+describe("GridTable pagination", () => {
+  function renderPager(props: Partial<React.ComponentProps<typeof GridTable>>) {
+    render(
+      <GridTable
+        columns={COLUMNS}
+        rows={ROWS}
+        sorts={[]}
+        onSortChange={vi.fn()}
+        page={3}
+        hasPrev
+        hasNext
+        onPageChange={vi.fn()}
+        {...props}
+      />,
+    );
+  }
+
+  it("shows position out of a total when the grid counts", () => {
+    renderPager({ pageCount: 12 });
+    expect(screen.getByText("3 / 12")).toBeInTheDocument();
+  });
+
+  // A skipTotal grid sends no total, so there is no last page to count towards
+  // and the label must not imply one.
+  it("shows the page number alone when the grid skips the count", () => {
+    renderPager({ pageCount: undefined });
+    expect(screen.getByText("Page 3")).toBeInTheDocument();
+    expect(screen.queryByText(/\//)).toBeNull();
+  });
+
+  // The flags, not the page number, decide: without a count there is nothing
+  // to compare the page against, and with one they agree anyway.
+  it("enables the arrows from hasPrev/hasNext, not from the page count", () => {
+    renderPager({ pageCount: undefined });
+    expect(screen.getByRole("button", { name: "Previous" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Next" })).toBeEnabled();
+  });
+
+  it("disables both arrows on a single unpaged page", () => {
+    renderPager({ page: 1, pageCount: 1, hasPrev: false, hasNext: false });
+    expect(screen.getByRole("button", { name: "Previous" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Next" })).toBeDisabled();
   });
 });

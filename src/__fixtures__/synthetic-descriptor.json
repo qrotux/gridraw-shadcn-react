@@ -3,8 +3,13 @@
   "idColumn": "id",
   "pageSize": 20,
   "pageSizeOptions": [10, 20, 50, 100],
-  "defaultSort": { "column": "name", "dir": "asc" },
-  "search": { "columns": ["name"] },
+  "defaultSort": {
+    "column": "name",
+    "dir": "asc"
+  },
+  "search": {
+    "columns": ["name"]
+  },
   "columns": [
     {
       "key": "name",
@@ -13,7 +18,12 @@
       "sortable": true,
       "defaultVisible": true,
       "filter": {
-        "operators": [{ "op": "contains", "label": "contains" }]
+        "operators": [
+          {
+            "op": "contains",
+            "label": "contains"
+          }
+        ]
       }
     },
     {
@@ -23,12 +33,24 @@
       "sortable": true,
       "defaultVisible": true,
       "filter": {
-        "operators": [{ "op": "eq", "label": "=" }],
+        "operators": [
+          {
+            "op": "eq",
+            "label": "="
+          }
+        ],
         "enumValues": [
-          { "value": "active", "label": "Active" },
-          { "value": "inactive", "label": "Inactive" }
+          {
+            "value": "active",
+            "label": "Active"
+          },
+          {
+            "value": "inactive",
+            "label": "Inactive"
+          }
         ]
-      }
+      },
+      "description": "Lifecycle state of the record."
     },
     {
       "key": "createdAt",

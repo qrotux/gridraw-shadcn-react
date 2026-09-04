@@ -5,13 +5,16 @@ import { ArrowDown, ArrowUp, ChevronsUpDown, Filter } from "lucide-react";
 import { cn } from "./ui/cn";
 import { useGridUi } from "./slots";
 
+import { DescriptionTip } from "./description-tip";
 import { useGridIdColumnOptional } from "./grid-id-column";
-import { useGridI18n } from "./messages";
+import { interpolate, useGridI18n } from "./messages";
 import type { GridRow, SortDir, SortSpec } from "./core/types";
 
 export type GridTableColumn = {
   key: string;
   title: React.ReactNode;
+  /** Descriptor prose; shown as a tooltip on the header when set. */
+  description?: string;
   sortable: boolean;
   filterable: boolean;
   pin?: "left" | "right";
@@ -32,7 +35,11 @@ export interface GridTableProps {
    *  preselected to that column. The icon is not rendered without it. */
   onAddFilter?: (key: string) => void;
   page: number;
-  pageCount: number;
+  /** Absent on a grid that skips the count; the label then shows the page
+   *  number alone and only the flags say whether a neighbour exists. */
+  pageCount?: number;
+  hasPrev: boolean;
+  hasNext: boolean;
   onPageChange: (page: number) => void;
   /** Current page size and selectable limits (the selector renders only
    *  when onPageSizeChange is set). */
@@ -131,6 +138,8 @@ export function GridTable({
   onAddFilter,
   page,
   pageCount,
+  hasPrev,
+  hasNext,
   onPageChange,
   pageSize,
   pageSizeOptions = [10, 25, 50, 100],
@@ -176,8 +185,8 @@ export function GridTable({
                 title={messages.filterColumn}
               />
             ) : null;
-          return (
-            <div className={cn("group flex items-center", col.pin === "right" && "justify-end")}>
+          const label = (
+            <>
               {col.sortable ? (
                 <Button
                   variant="ghost"
@@ -191,6 +200,17 @@ export function GridTable({
                 </Button>
               ) : (
                 <span className={cn(col.pin === "right" && "text-right")}>{col.title}</span>
+              )}
+            </>
+          );
+          return (
+            <div className={cn("group flex items-center", col.pin === "right" && "justify-end")}>
+              {col.description ? (
+                <DescriptionTip description={col.description}>
+                  <span className="flex items-center">{label}</span>
+                </DescriptionTip>
+              ) : (
+                label
               )}
               {filterBtn}
             </div>
@@ -287,18 +307,15 @@ export function GridTable({
           <span />
         )}
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={() => onPageChange(page - 1)} disabled={page <= 1}>
+          <Button variant="outline" size="sm" onClick={() => onPageChange(page - 1)} disabled={!hasPrev}>
             {messages.prev}
           </Button>
           <span className="text-sm text-muted-foreground tabular-nums">
-            {page} / {Math.max(pageCount, 1)}
+            {pageCount === undefined
+              ? interpolate(messages.page, { page })
+              : `${page} / ${Math.max(pageCount, 1)}`}
           </span>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => onPageChange(page + 1)}
-            disabled={page >= pageCount}
-          >
+          <Button variant="outline" size="sm" onClick={() => onPageChange(page + 1)} disabled={!hasNext}>
             {messages.next}
           </Button>
         </div>

@@ -15,6 +15,7 @@ import {
 } from "./ui/dropdown-menu";
 import { Input } from "./ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./ui/table";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/tooltip";
 
 export type SelectOption = { value: string; label: string };
 
@@ -68,6 +69,9 @@ export type GridComponents = {
   }>;
   DropdownMenuLabel: React.ComponentType<{ children?: React.ReactNode }>;
   DropdownMenuSeparator: React.ComponentType<{ className?: string }>;
+  Tooltip: React.ComponentType<{ delayDuration?: number; children?: React.ReactNode }>;
+  TooltipTrigger: React.ComponentType<{ asChild?: boolean; children?: React.ReactNode }>;
+  TooltipContent: React.ComponentType<{ className?: string; children?: React.ReactNode }>;
 };
 
 /** Class strings appended to the grid's own containers. Each is merged through
@@ -106,6 +110,23 @@ function NativeSelect({ value, onValueChange, options, placeholder, ariaLabel, c
   );
 }
 
+// Radix requires a provider above every tooltip root. Keeping it inside the
+// slot means a consumer swapping Tooltip for their own has nothing else to
+// mount, and a stray second provider would be harmless anyway.
+function ProvidedTooltip({
+  delayDuration,
+  children,
+}: {
+  delayDuration?: number;
+  children?: React.ReactNode;
+}) {
+  return (
+    <TooltipProvider delayDuration={delayDuration}>
+      <Tooltip delayDuration={delayDuration}>{children}</Tooltip>
+    </TooltipProvider>
+  );
+}
+
 export const defaultGridComponents: GridComponents = {
   Input,
   Button,
@@ -124,6 +145,9 @@ export const defaultGridComponents: GridComponents = {
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
+  Tooltip: ProvidedTooltip,
+  TooltipTrigger,
+  TooltipContent,
 };
 
 export function mergeComponents(partial?: Partial<GridComponents>): GridComponents {

@@ -15,7 +15,9 @@ function mockFetch() {
   return vi.fn(async (url: string) => {
     const json = (v: unknown) =>
       new Response(JSON.stringify(v), { status: 200, headers: { "Content-Type": "application/json" } });
-    return url.endsWith("/rows") ? json({ rows, total: rows.length }) : json(descriptorFixture);
+    return url.endsWith("/rows")
+      ? json({ rows, total: rows.length, hasPrev: false, hasNext: false })
+      : json(descriptorFixture);
   });
 }
 

@@ -1,7 +1,8 @@
 import * as React from "react";
-import { Columns } from "lucide-react";
+import { Columns, Info } from "lucide-react";
 
 import type { GridColumn, GridDescriptor } from "./core/types";
+import { DescriptionTip } from "./description-tip";
 import { useGridI18n } from "./messages";
 import { useGridUi } from "./slots";
 
@@ -111,6 +112,17 @@ export function ColumnPicker({
               onCheckedChange={(checked) => toggle(col.key, checked === true)}
             />
             <span>{col.title}</span>
+            {col.description && (
+              <DescriptionTip description={col.description}>
+                {/* A span, not the icon itself: Radix's trigger needs a host
+                    element it can attach handlers and a ref to, and it must
+                    stay focusable so the description is reachable by keyboard
+                    inside the menu. */}
+                <span tabIndex={0} aria-label={col.description} className="ml-auto text-muted-foreground">
+                  <Info className="size-3.5" />
+                </span>
+              </DescriptionTip>
+            )}
           </DropdownMenuItem>
         ))}
         <DropdownMenuSeparator />

@@ -62,6 +62,9 @@ export type GridColumn = {
   key: string;
   type: ColType;
   title: string;
+  /** Longer prose about the column; absent when the server sets neither a
+   *  literal description nor a translation. */
+  description?: string;
   sortable: boolean;
   defaultVisible: boolean;
   /** Array of `type` elements; the element type is `type` itself. Array columns
@@ -76,6 +79,11 @@ export type GridColumn = {
 export type GridDescriptor = {
   name: string;
   idColumn: string;
+  description?: string;
+  /** True only on a grid whose rows response carries no `total`: the count is
+   *  too expensive to run per request, so the page paginates on hasPrev and
+   *  hasNext instead of page numbers. Omitted otherwise. */
+  skipTotal?: boolean;
   /** Server default page size (the UI follows it) and the selectable limits. */
   pageSize: number;
   pageSizeOptions: number[];
@@ -96,7 +104,16 @@ export type RowsRequest = {
 };
 
 export type GridRow = Record<string, unknown>;
-export type RowsResponse = { rows: GridRow[]; total: number };
+/** `total` is absent on a `skipTotal` grid — and only then: a counting grid
+ *  sends an explicit `"total": 0` for an empty result, so the key's presence
+ *  is what distinguishes the two, never its value. `hasPrev` and `hasNext` are
+ *  always present and cost the server nothing. */
+export type RowsResponse = {
+  rows: GridRow[];
+  total?: number;
+  hasPrev: boolean;
+  hasNext: boolean;
+};
 
 /** Request state (lives in the URL); column visibility is kept separately (localStorage). */
 export type GridState = {

@@ -26,7 +26,7 @@ function mockFetch() {
     if (url.endsWith("/rows")) {
       rowsRequestCount += 1;
       lastRowsBody = init?.body ? JSON.parse(String(init.body)) : null;
-      return json({ rows, total: rows.length });
+      return json({ rows, total: rows.length, hasPrev: false, hasNext: false });
     }
     return json(descriptorFixture);
   });
@@ -190,5 +190,64 @@ describe("GridPage", () => {
     await screen.findByText("Alice");
     expect(screen.getByText("OVERRIDE")).toBeInTheDocument();
     expect(screen.queryByText("+ Or group")).toBeNull();
+  });
+});
+
+describe("GridPage without a row count", () => {
+  beforeEach(() => {
+    // A skipTotal grid omits the total key entirely; a counting grid with no
+    // matches would send an explicit "total": 0 instead.
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string) => {
+        const json = (v: unknown) =>
+          new Response(JSON.stringify(v), { status: 200, headers: { "Content-Type": "application/json" } });
+        if (url.endsWith("/rows")) return json({ rows, hasPrev: false, hasNext: true });
+        return json({ ...descriptorFixture, skipTotal: true });
+      }),
+    );
+  });
+  afterEach(() => {
+    cleanup();
+    vi.unstubAllGlobals();
+  });
+
+  it("paginates on the flags and prints no row count", async () => {
+    renderHarness();
+    // The flags only exist once the rows response lands; the label renders
+    // before that, so waiting on it alone would assert an empty grid.
+    await screen.findByText("Alice");
+    expect(screen.getByText("Page 1")).toBeInTheDocument();
+    expect(screen.queryByText(/rows$/)).toBeNull();
+    expect(screen.getByRole("button", { name: "Next" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Previous" })).toBeDisabled();
+  });
+});
+
+describe("GridPage against a server older than hasPrev/hasNext", () => {
+  beforeEach(() => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string) => {
+        const json = (v: unknown) =>
+          new Response(JSON.stringify(v), { status: 200, headers: { "Content-Type": "application/json" } });
+        // The pre-flags rows response: a total and nothing else.
+        if (url.endsWith("/rows")) return json({ rows, total: 50 });
+        return json(descriptorFixture);
+      }),
+    );
+  });
+  afterEach(() => {
+    cleanup();
+    vi.unstubAllGlobals();
+  });
+
+  it("falls back to page arithmetic so the arrows still work", async () => {
+    renderHarness();
+    await screen.findByText("Alice");
+    // 50 rows over the fixture's page size of 20 is three pages.
+    expect(screen.getByText("1 / 3")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Next" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Previous" })).toBeDisabled();
   });
 });

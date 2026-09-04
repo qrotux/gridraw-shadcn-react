@@ -12,6 +12,7 @@ export type GridMessages = {
   rowsPerPage: string;
   prev: string;
   next: string;
+  page: string; // "{page}", shown instead of "3 / 12" when the grid skips the count
   booleanTrue: string;
   booleanFalse: string;
   value: string;
@@ -44,6 +45,7 @@ export const defaultGridMessages: Required<GridMessages> = {
   rowsPerPage: "Rows per page",
   prev: "Previous",
   next: "Next",
+  page: "Page {page}",
   booleanTrue: "Yes",
   booleanFalse: "No",
   value: "Value",

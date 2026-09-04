@@ -264,6 +264,13 @@ for another framework can reuse the entry as is.
 }
 ```
 
+A grid and a column may each carry a `description`, omitted when the server
+sets none. A column description shows as a tooltip on its table header and as
+an ⓘ marker in the column picker, both opening after a two-second hover and on
+keyboard focus. The built-in tooltip animates with the `animate-in` utilities
+from `tw-animate-css`; without that package it simply appears without a
+transition.
+
 Column types: `string`, `uuid`, `number`, `decimal`, `boolean`, `enum`, `date`,
 `time`, `datetime`, `json`. A column may also set `"array": true`, making its
 `type` the element type. `time` and `datetime` carry a `step` (seconds,
@@ -318,8 +325,21 @@ of element values for `in`/`notIn` and the array operators (`string[]`, or
 sends `null`). Empty `sort` means the server default. The response is:
 
 ```json
-{ "rows": [{ "email": "a@x", "role": "admin", "id": "..." }], "total": 1 }
+{
+  "rows": [{ "email": "a@x", "role": "admin", "id": "..." }],
+  "total": 1,
+  "hasPrev": false,
+  "hasNext": true
+}
 ```
+
+`hasPrev` and `hasNext` are always present and are what the pagination arrows
+follow. A server older than these fields sends neither, and the page falls back
+to the arithmetic it used before: `page > 1` and `page < ceil(total / pageSize)`. `total` is present unless the grid skips the count, which the
+descriptor announces with `"skipTotal": true`: the page then shows the page
+number alone instead of `3 / 12` and prints no row count. The key's presence
+is what distinguishes the two cases — a counting grid sends an explicit
+`"total": 0` for an empty result, a skipping one omits the key entirely.
 
 Row values arrive typed: `uuid` as a lowercase string, `number` as a JSON
 number, `decimal` as a string with its stored scale (`"4.10"`), `date` as
