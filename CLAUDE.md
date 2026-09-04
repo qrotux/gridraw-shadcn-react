@@ -23,7 +23,7 @@ Three package entries, one source tree.
 - **`src/*.ts(x)`** — the root entry: `GridPage`, hooks, i18n, cells, filter panel, table, column picker. Internal components are not exported.
 - **`examples/`** — not part of the package (`files` ships only `dist`, README, LICENSE). Snippets only: no build, no dev server, no dependencies beyond the existing devDependencies. They import the package by name; `examples/tsconfig.json` maps that to `src` for tsc and `vitest.config.ts` aliases it at runtime. Never let those specifiers resolve to `dist`, which does not exist before the build step.
 - **`src/react-router.ts`** — the `./react-router` entry; together with its test the only file that may import `react-router-dom`, which is an optional peer.
-- **`src/ui/`** — shadcn/ui component copies (button, checkbox, dropdown-menu, input, table, `cn`). They are also consumed by the main application as-is. Do not trim unused exports, restyle or "modernise" them; upstream shadcn shape is the contract.
+- **`src/ui/`** — shadcn/ui component copies (button, checkbox, dropdown-menu, input, table, badge, `cn`) plus `control` (a shared class string for the native `<select>` controls). They are also consumed by the main application as-is. Do not trim unused exports, restyle or "modernise" them; upstream shadcn shape is the contract. Reuse these primitives (Input for typed inputs, Badge for pills/chips) instead of hand-writing the same Tailwind classes at call sites.
 - **Import direction:** `core` ← everything else. `core` imports nothing from `src/` outside itself.
 
 ## Invariants

@@ -5,6 +5,7 @@ import { ArrowDown, ArrowUp, ChevronsUpDown, Filter } from "lucide-react";
 import { Button } from "./ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./ui/table";
 import { cn } from "./ui/cn";
+import { controlClass } from "./ui/control";
 
 import { useGridIdColumnOptional } from "./grid-id-column";
 import { useGridI18n } from "./messages";
@@ -273,7 +274,7 @@ export function GridTable({
           <label className="flex items-center gap-1.5 text-sm text-muted-foreground">
             {messages.rowsPerPage}
             <select
-              className="h-8 rounded-md border bg-transparent px-2 text-sm"
+              className={controlClass}
               value={pageSize}
               onChange={(e) => onPageSizeChange(Number(e.target.value))}
               aria-label={messages.rowsPerPage}

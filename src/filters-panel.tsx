@@ -1,7 +1,9 @@
 import * as React from "react";
 import { ChevronsUpDown, X } from "lucide-react";
 
+import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
+import { controlClass } from "./ui/control";
 import { Input } from "./ui/input";
 import { Checkbox } from "./ui/checkbox";
 import { cn } from "./ui/cn";
@@ -145,11 +147,11 @@ function DecimalValueInput({ value, onChange }: { value: unknown; onChange: (v: 
 function DateValueInput({ value, onChange }: { value: unknown; onChange: (v: string | undefined) => void }) {
   const { messages } = useGridI18n();
   return (
-    <input
+    <Input
       type="date"
       value={typeof value === "string" ? value : ""}
       onChange={(e) => onChange(e.target.value === "" ? undefined : e.target.value)}
-      className="h-8 rounded-md border border-input bg-transparent px-2 text-sm shadow-sm"
+      className="h-8 w-auto px-2 text-sm"
       aria-label={messages.value}
     />
   );
@@ -215,12 +217,12 @@ function DatetimeValueInput({
   }
 
   return (
-    <input
+    <Input
       type="datetime-local"
       step={step}
       value={raw}
       onChange={handle}
-      className="h-8 rounded-md border border-input bg-transparent px-2 text-sm shadow-sm"
+      className="h-8 w-auto px-2 text-sm"
       aria-label={messages.value}
     />
   );
@@ -240,12 +242,12 @@ function TimeValueInput({
 }) {
   const { messages } = useGridI18n();
   return (
-    <input
+    <Input
       type="time"
       step={step}
       value={typeof value === "string" ? value : ""}
       onChange={(e) => onChange(e.target.value === "" ? undefined : e.target.value)}
-      className="h-8 rounded-md border border-input bg-transparent px-2 text-sm shadow-sm"
+      className="h-8 w-auto px-2 text-sm"
       aria-label={messages.value}
     />
   );
@@ -258,7 +260,7 @@ function BooleanValueInput({ value, onChange }: { value: unknown; onChange: (v: 
     <select
       value={current}
       onChange={(e) => onChange(e.target.value === "" ? undefined : e.target.value === "true")}
-      className="h-8 rounded-md border border-input bg-transparent px-2 text-sm shadow-sm"
+      className={controlClass}
       aria-label={messages.value}
     >
       <option value="">—</option>
@@ -304,10 +306,7 @@ function TagValueInput({
   return (
     <div className="flex flex-wrap items-center gap-1">
       {tags.map((t, i) => (
-        <span
-          key={i}
-          className="inline-flex items-center gap-1 rounded-full border bg-muted px-2 py-0.5 text-xs"
-        >
+        <Badge key={i} variant="chip">
           {String(t)}
           <button
             type="button"
@@ -317,7 +316,7 @@ function TagValueInput({
           >
             <X className="size-3" />
           </button>
-        </span>
+        </Badge>
       ))}
       <Input
         value={draft}
@@ -414,12 +413,9 @@ function EnumTagInput({
 
   return (
     <div ref={rootRef} className="relative">
-      <div className="flex min-h-8 w-56 flex-wrap items-center gap-1 rounded-md border border-input bg-transparent px-2 py-1 shadow-sm">
+      <div className="flex min-h-8 w-56 flex-wrap items-center gap-1 rounded-md border border-input bg-transparent px-2 py-0.5 shadow-sm">
         {selected.map((v, i) => (
-          <span
-            key={i}
-            className="inline-flex items-center gap-1 rounded-full border bg-muted px-2 py-0.5 text-xs"
-          >
+          <Badge key={i} variant="chip">
             {labelOf(v)}
             <button
               type="button"
@@ -429,7 +425,7 @@ function EnumTagInput({
             >
               <X className="size-3" />
             </button>
-          </span>
+          </Badge>
         ))}
         <input
           role="combobox"
@@ -709,7 +705,7 @@ function ClauseEditor({
       <select
         value={field}
         onChange={(e) => selectField(e.target.value)}
-        className="h-8 rounded-md border border-input bg-transparent px-2 text-sm shadow-sm"
+        className={controlClass}
         aria-label={messages.columnAria}
       >
         <option value="">{messages.columnPlaceholder}</option>
@@ -724,7 +720,7 @@ function ClauseEditor({
         <select
           value={op}
           onChange={(e) => selectOp(e.target.value)}
-          className="h-8 rounded-md border border-input bg-transparent px-2 text-sm shadow-sm"
+          className={controlClass}
           aria-label={messages.operatorAria}
         >
           {operators.map((o) => (
@@ -772,7 +768,7 @@ function Chip({
 }) {
   const { messages, locale } = useGridI18n();
   return (
-    <span className="inline-flex items-center gap-1 rounded-full border bg-muted px-2 py-1 text-xs">
+    <Badge variant="chip">
       <button
         type="button"
         aria-label={messages.editClauseAria}
@@ -785,13 +781,11 @@ function Chip({
         type="button"
         aria-label={messages.removeClauseAria}
         onClick={onRemove}
-        className={cn(
-          "rounded-full p-0.5 text-muted-foreground hover:bg-accent hover:text-accent-foreground",
-        )}
+        className="rounded-full p-0.5 text-muted-foreground hover:bg-accent hover:text-accent-foreground"
       >
         <X className="size-3" />
       </button>
-    </span>
+    </Badge>
   );
 }
 

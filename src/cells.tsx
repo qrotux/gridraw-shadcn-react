@@ -1,17 +1,9 @@
-import type * as React from "react";
 import { Check, X } from "lucide-react";
 
 import type { GridColumn } from "./core/types";
 import { formatTemporal } from "./format";
 import { useGridI18n } from "./messages";
-
-export function Badge({ children }: { children: React.ReactNode }) {
-  return (
-    <span className="inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-medium">
-      {children}
-    </span>
-  );
-}
+import { Badge } from "./ui/badge";
 
 function Empty() {
   return <span className="text-muted-foreground">—</span>;
@@ -37,8 +29,9 @@ export function CellValue({ column, value }: { column: GridColumn; value: unknow
   }
   switch (column.type) {
     case "boolean":
+      // Theme tokens only: true stands out at full foreground, false is muted.
       return value ? (
-        <Check className="size-4 text-emerald-600" />
+        <Check className="size-4 text-foreground" />
       ) : (
         <X className="size-4 text-muted-foreground" />
       );
