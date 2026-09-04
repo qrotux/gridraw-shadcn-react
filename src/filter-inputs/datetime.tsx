@@ -1,17 +1,8 @@
 import * as React from "react";
 
+import { coerceDatetimeLocal, datetimeLocalFromIso } from "../core/coerce";
 import { Input } from "../ui/input";
 import { useGridI18n } from "../messages";
-
-// ISO (UTC) to local "YYYY-MM-DDTHH:mm" for pre-filling datetime-local when
-// editing an existing clause.
-function isoToLocalInput(value: unknown): string {
-  if (typeof value !== "string") return "";
-  const d = new Date(value);
-  if (Number.isNaN(d.getTime())) return "";
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
-}
 
 export function DatetimeValueInput({
   value,
@@ -23,17 +14,13 @@ export function DatetimeValueInput({
   step?: number; // column resolution in seconds; drives the input's precision
 }) {
   const { messages } = useGridI18n();
-  const [raw, setRaw] = React.useState(() => isoToLocalInput(value));
+  // Local state: the value on the wire is an instant in UTC, so deriving the
+  // field back from it would fight the user mid-edit.
+  const [raw, setRaw] = React.useState(() => datetimeLocalFromIso(value));
 
   function handle(e: React.ChangeEvent<HTMLInputElement>) {
-    const text = e.target.value;
-    setRaw(text);
-    if (!text) {
-      onChange(undefined);
-      return;
-    }
-    const d = new Date(text);
-    onChange(Number.isNaN(d.getTime()) ? undefined : d.toISOString());
+    setRaw(e.target.value);
+    onChange(coerceDatetimeLocal(e.target.value));
   }
 
   return (

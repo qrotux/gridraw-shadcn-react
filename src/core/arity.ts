@@ -1,4 +1,4 @@
-import type { FilterOp } from "../core/types";
+import type { FilterOp } from "./types";
 
 // The kind of value an operator carries. One classification drives the input
 // component, the commit guard and the chip label, so a new operator only has to

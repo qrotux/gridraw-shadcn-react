@@ -1,3 +1,4 @@
+import { coerceText } from "../core/coerce";
 import { Input } from "../ui/input";
 import { useGridI18n } from "../messages";
 
@@ -19,7 +20,7 @@ export function TimeValueInput({
       type="time"
       step={step}
       value={typeof value === "string" ? value : ""}
-      onChange={(e) => onChange(e.target.value === "" ? undefined : e.target.value)}
+      onChange={(e) => onChange(coerceText(e.target.value))}
       className="h-8 w-auto px-2 text-sm"
       aria-label={messages.value}
     />

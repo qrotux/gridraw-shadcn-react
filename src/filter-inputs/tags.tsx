@@ -1,6 +1,8 @@
 import * as React from "react";
 import { X } from "lucide-react";
 
+import { coerceElement } from "../core/coerce";
+import type { ColType } from "../core/types";
 import { Badge } from "../ui/badge";
 import { Input } from "../ui/input";
 import { useGridI18n } from "../messages";
@@ -10,15 +12,13 @@ import { useGridI18n } from "../messages";
 // an empty field removes the last. A half-typed token that was never added is
 // dropped, exactly as an unchecked box would be — commit only sees added ones.
 export function TagValueInput({
+  element,
   value,
   onChange,
-  parse,
 }: {
+  element: ColType; // element type a typed token is coerced to
   value: unknown;
   onChange: (v: unknown) => void;
-  // Coerces a typed token to its wire element (e.g. a number). Returning
-  // undefined rejects the token. Defaults to the trimmed string.
-  parse?: (raw: string) => unknown;
 }) {
   const { messages } = useGridI18n();
   const tags = Array.isArray(value) ? (value as unknown[]) : [];
@@ -28,7 +28,7 @@ export function TagValueInput({
     const raw = draft.trim();
     setDraft("");
     if (!raw) return;
-    const v = parse ? parse(raw) : raw;
+    const v = coerceElement(element, raw);
     if (v === undefined || tags.some((t) => t === v)) return;
     onChange([...tags, v]);
   }

@@ -1,20 +1,18 @@
 import * as React from "react";
 
-import type { GridColumn } from "../core/types";
-import { DateValueInput } from "./date";
-import { DatetimeValueInput } from "./datetime";
-import { DecimalValueInput } from "./decimal";
-import { NumberValueInput } from "./number";
-import { TimeValueInput } from "./time";
+import type { ScalarInputKind } from "../core/value-input-spec";
+import { ScalarValueInput } from "./scalar";
 
 export function BetweenValueInput({
-  column,
+  field,
   value,
   onChange,
+  step,
 }: {
-  column: GridColumn;
+  field: ScalarInputKind;
   value: unknown;
   onChange: (v: unknown) => void;
+  step?: number;
 }) {
   // Both sides live in local state, seeded once from `value` (ClauseEditor
   // remounts this input when the value shape changes, via its arity-based key).
@@ -39,27 +37,11 @@ export function BetweenValueInput({
     commit(a, v);
   }
 
-  // Both ends share the column's scalar input; temporal ends carry the step.
-  function field(v: unknown, on: (x: unknown) => void) {
-    switch (column.type) {
-      case "datetime":
-        return <DatetimeValueInput value={v} onChange={on} step={column.step} />;
-      case "time":
-        return <TimeValueInput value={v} onChange={on} step={column.step} />;
-      case "date":
-        return <DateValueInput value={v} onChange={on} />;
-      case "decimal":
-        return <DecimalValueInput value={v} onChange={on} />;
-      default:
-        return <NumberValueInput value={v} onChange={on} />;
-    }
-  }
-
   return (
     <div className="flex items-center gap-1">
-      {field(a, handleA)}
+      <ScalarValueInput field={field} value={a} onChange={handleA} step={step} />
       <span className="text-xs text-muted-foreground">–</span>
-      {field(b, handleB)}
+      <ScalarValueInput field={field} value={b} onChange={handleB} step={step} />
     </div>
   );
 }

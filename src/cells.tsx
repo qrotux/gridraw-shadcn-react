@@ -1,7 +1,7 @@
 import { Check, X } from "lucide-react";
 
 import type { GridColumn } from "./core/types";
-import { formatTemporal } from "./format";
+import { formatTemporal } from "./core/format";
 import { useGridI18n } from "./messages";
 import { Badge } from "./ui/badge";
 

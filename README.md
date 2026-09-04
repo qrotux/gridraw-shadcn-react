@@ -141,11 +141,19 @@ without a router.
 
 ## Entries
 
-| Entry            | Contents                                                                                                                                                                                       |
-| ---------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `.`              | `GridPage`, `useGridUrlState` (router-agnostic), `invalidateGridRows`, `useClampedTextCell`, `GridIdColumnProvider`, `useGridIdColumn`, `useGridRowId`, `defaultGridMessages`, protocol types. |
-| `./core`         | Protocol types and constants, `fetchDescriptor`, `fetchRows`, URL codec, `interpolate`. No React.                                                                                              |
-| `./react-router` | `useGridUrlState()` bound to `react-router-dom`.                                                                                                                                               |
+| Entry            | Contents                                                                                                                                                                                                                                                                        |
+| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `.`              | `GridPage`, `useGridUrlState` (router-agnostic), `invalidateGridRows`, `useClampedTextCell`, `GridIdColumnProvider`, `useGridIdColumn`, `useGridRowId`, `defaultGridMessages`, protocol types.                                                                                  |
+| `./core`         | Everything that is not React: protocol types and constants, `fetchDescriptor`, `fetchRows`, URL codec, the message dictionary, and the filter logic (`opArity`, `defaultOp`, `buildClause`, `clauseLabel`, `valueInputSpec`, the `coerce*` value converters, `formatTemporal`). |
+| `./react-router` | `useGridUrlState()` bound to `react-router-dom`.                                                                                                                                                                                                                                |
+
+`./core` holds the whole model layer: given a descriptor and a grid state it
+decides which operators carry which value shape, which input control a
+column/operator pair needs (`valueInputSpec`), whether a draft clause may be
+committed (`canCommitClause` / `buildClause`), how a value is coerced to its
+wire type (`coerceNumber`, `coerceDatetimeLocal`, …) and how a clause reads as
+a chip (`clauseLabel`). The React entry only renders those decisions, so a UI
+for another framework can reuse the entry as is.
 
 ## Wire protocol
 

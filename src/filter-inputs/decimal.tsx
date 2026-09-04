@@ -1,3 +1,4 @@
+import { coerceText } from "../core/coerce";
 import { Input } from "../ui/input";
 import { useGridI18n } from "../messages";
 
@@ -10,7 +11,7 @@ export function DecimalValueInput({ value, onChange }: { value: unknown; onChang
     <Input
       inputMode="decimal"
       value={typeof value === "string" ? value : ""}
-      onChange={(e) => onChange(e.target.value === "" ? undefined : e.target.value)}
+      onChange={(e) => onChange(coerceText(e.target.value))}
       placeholder={messages.number}
       className="h-8 w-28"
     />

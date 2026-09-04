@@ -1,17 +1,16 @@
 import { Checkbox } from "../ui/checkbox";
-import type { GridColumn } from "../core/types";
+import type { EnumValue } from "../core/types";
 
 export function EnumValueInput({
-  column,
+  options,
   value,
   onChange,
 }: {
-  column: GridColumn;
+  options: EnumValue[];
   value: unknown;
   onChange: (v: unknown) => void;
 }) {
   const selected = Array.isArray(value) ? (value as string[]) : [];
-  const options = column.filter?.enumValues ?? [];
 
   function toggle(v: string, checked: boolean) {
     const next = checked ? [...selected, v] : selected.filter((x) => x !== v);

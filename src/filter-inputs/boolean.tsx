@@ -1,3 +1,4 @@
+import { coerceBoolean } from "../core/coerce";
 import { controlClass } from "../ui/control";
 import { useGridI18n } from "../messages";
 
@@ -7,7 +8,7 @@ export function BooleanValueInput({ value, onChange }: { value: unknown; onChang
   return (
     <select
       value={current}
-      onChange={(e) => onChange(e.target.value === "" ? undefined : e.target.value === "true")}
+      onChange={(e) => onChange(coerceBoolean(e.target.value))}
       className={controlClass}
       aria-label={messages.value}
     >

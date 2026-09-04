@@ -5,76 +5,12 @@ import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
 import { controlClass } from "./ui/control";
 
-import { ValueInput, opArity } from "./filter-inputs";
-import { formatTemporal } from "./format";
-import { useGridI18n, type GridMessages } from "./messages";
+import { ValueInput } from "./filter-inputs";
+import { opArity } from "./core/arity";
+import { buildClause, canCommitClause, defaultOp, keepsValueShape } from "./core/clause";
+import { clauseLabel } from "./core/clause-label";
+import { useGridI18n } from "./messages";
 import type { FilterClause, FilterOp, GridColumn } from "./core/types";
-
-// ---------------------------------------------------------------------------
-// label helpers (used by chips)
-// ---------------------------------------------------------------------------
-
-function opLabel(column: GridColumn | undefined, op: FilterOp): string {
-  return column?.filter?.operators.find((o) => o.op === op)?.label ?? op;
-}
-
-// Default operator on column selection: string columns prefer "contains"
-// (the most common intent) when available, otherwise the first listed.
-function defaultOp(column: GridColumn): FilterOp | "" {
-  const ops = column.filter?.operators ?? [];
-  if (column.type === "string" && ops.some((o) => o.op === "contains")) return "contains";
-  return ops[0]?.op ?? "";
-}
-
-function enumLabel(column: GridColumn | undefined, value: unknown): string {
-  const raw = String(value);
-  return column?.filter?.enumValues?.find((e) => e.value === raw)?.label ?? raw;
-}
-
-function formatScalar(
-  column: GridColumn | undefined,
-  value: unknown,
-  messages: Required<GridMessages>,
-  locale: string,
-): string {
-  if (column?.type === "enum") return enumLabel(column, value);
-  if (column?.type === "boolean") return value ? messages.booleanTrue : messages.booleanFalse;
-  // date/time/datetime are localized the same way as their cells (step and all);
-  // other types pass through unchanged.
-  return formatTemporal(column?.type ?? "string", value, locale, column?.step);
-}
-
-function formatValue(
-  column: GridColumn | undefined,
-  op: FilterOp,
-  value: unknown,
-  messages: Required<GridMessages>,
-  locale: string,
-): string {
-  const arity = opArity(op);
-  if (arity === "range" && Array.isArray(value)) {
-    return `${formatScalar(column, value[0], messages, locale)} – ${formatScalar(column, value[1], messages, locale)}`;
-  }
-  if (arity === "multi" && Array.isArray(value)) {
-    return value.map((v) => formatScalar(column, v, messages, locale)).join(", ");
-  }
-  return formatScalar(column, value, messages, locale);
-}
-
-/** Chip text: `<Title> <opLabel> <value>`, labels resolved from the descriptor. */
-export function clauseLabel(
-  clause: FilterClause,
-  columns: GridColumn[],
-  messages: Required<GridMessages>,
-  locale: string,
-): string {
-  const column = columns.find((c) => c.key === clause.field);
-  const title = column?.title ?? clause.field;
-  const label = opLabel(column, clause.op);
-  // Value-less operators (isNull, isEmpty…) print just "<Title> <op>".
-  if (opArity(clause.op) === "none") return `${title} ${label}`;
-  return `${title} ${label} ${formatValue(column, clause.op, clause.value, messages, locale)}`;
-}
 
 // ---------------------------------------------------------------------------
 // clause editor — column select → operator select → value input → commit
@@ -116,18 +52,18 @@ function ClauseEditor({
     // Keep the entered value when the new operator carries the same value shape
     // (e.g. containsAny → containsAll, or between → notBetween); reset only when
     // the shape changes (scalar ↔ range ↔ multi ↔ value-less).
-    if (op === "" || opArity(nextOp) !== opArity(op)) setDraft(undefined);
+    if (!keepsValueShape(op, nextOp)) setDraft(undefined);
     setOp(nextOp);
   }
 
-  // Value-less operators commit without a draft; everything else needs one.
+  // Value-less operators (isNull, isEmpty…) render no input and commit null.
   const noValue = op !== "" && opArity(op) === "none";
-  const canCommit = column !== undefined && op !== "" && (noValue || draft !== undefined);
+  const canCommit = canCommitClause(column, op, draft);
 
   function commit() {
-    if (column === undefined || op === "") return;
-    if (!noValue && draft === undefined) return;
-    onCommit({ field: column.key, op, value: noValue ? null : draft });
+    const clause = buildClause(column, op, draft);
+    if (clause === undefined) return;
+    onCommit(clause);
     setField("");
     setOp("");
     setDraft(undefined);

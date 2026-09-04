@@ -1,5 +1,6 @@
 import * as React from "react";
 
+import { coerceNumber } from "../core/coerce";
 import { Input } from "../ui/input";
 import { useGridI18n } from "../messages";
 
@@ -11,17 +12,14 @@ export function NumberValueInput({
   onChange: (v: number | undefined) => void;
 }) {
   const { messages } = useGridI18n();
+  // The typed text is local state: coercion drops what is not yet a number
+  // ("-", "1e"), and re-deriving the field from the coerced value would erase
+  // those keystrokes.
   const [raw, setRaw] = React.useState(typeof value === "number" ? String(value) : "");
 
   function handle(e: React.ChangeEvent<HTMLInputElement>) {
-    const text = e.target.value;
-    setRaw(text);
-    if (text.trim() === "") {
-      onChange(undefined);
-      return;
-    }
-    const n = Number(text);
-    onChange(Number.isNaN(n) ? undefined : n);
+    setRaw(e.target.value);
+    onChange(coerceNumber(e.target.value));
   }
 
   return (

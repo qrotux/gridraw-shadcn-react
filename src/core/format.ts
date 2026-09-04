@@ -1,4 +1,4 @@
-import type { ColType } from "./core/types";
+import type { ColType } from "./types";
 
 const TZ = Intl.DateTimeFormat().resolvedOptions().timeZone;
 
