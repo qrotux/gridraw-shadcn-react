@@ -3,16 +3,7 @@ import { Columns } from "lucide-react";
 
 import type { GridColumn, GridDescriptor } from "./core/types";
 import { useGridI18n } from "./messages";
-import { Button } from "./ui/button";
-import { Checkbox } from "./ui/checkbox";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "./ui/dropdown-menu";
+import { useGridUi } from "./slots";
 
 function storageKey(name: string) {
   return `grid:${name}:columns`;
@@ -82,6 +73,16 @@ export function ColumnPicker({
   onChange: (keys: string[]) => void;
 }) {
   const { messages } = useGridI18n();
+  const {
+    Button,
+    Checkbox,
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuLabel,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
+  } = useGridUi().components;
   const visibleSet = React.useMemo(() => new Set(visible), [visible]);
 
   function toggle(key: string, checked: boolean) {

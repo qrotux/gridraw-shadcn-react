@@ -40,6 +40,23 @@ setup must scan the package output so the classes are generated:
 
 Adjust the relative path to your CSS entry file.
 
+Everything else follows your theme tokens, because every utility in Tailwind v4
+resolves through one: `rounded-md` is `var(--radius-md)`, `h-8` is
+`calc(var(--spacing) * 8)`, `text-sm` is `var(--text-sm)`. A canonical shadcn
+theme derives the radius scale from a single variable, and the grid follows it
+without being told:
+
+```css
+@theme inline {
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+}
+```
+
+A theme that defines colours only keeps Tailwind's default radius, and the grid
+will not match a design system that rounds its corners differently.
+
 ## Usage
 
 `GridPage` is controlled: it renders the grid for `state` and reports changes
@@ -75,6 +92,62 @@ export function UsersPage() {
 | `extraFetch`    | Column keys to request even when hidden (for example fields used by `extraColumns`). The id column is always requested.                     |
 | `messages`      | Partial `GridMessages` overriding the English chrome strings.                                                                               |
 | `locale`        | BCP-47 locale for date formatting, default `en-GB`.                                                                                         |
+| `components`    | Partial `GridComponents` replacing the built-in shadcn components, one slot at a time.                                                      |
+| `classNames`    | `GridClassNames`: class strings appended to the grid's own containers.                                                                      |
+
+### Bringing your own components
+
+The package ships its own shadcn copies and uses them by default. If you have
+restyled shadcn components of your own, pass them in and the grid renders yours:
+
+```tsx
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+
+<GridPage name="users" state={state} onStateChange={setState} components={{ Input, Button }} />;
+```
+
+Overriding is per slot: the slots you do not pass keep the built-in component.
+
+Each slot is typed by the props the grid actually passes it, not by the full
+upstream type, so an upstream-shaped component satisfies it structurally with no
+adapter. `Button` is driven only with `variant="outline" | "ghost"` and
+`size="sm"`; `Badge` only with `variant="secondary" | "outline"`.
+
+| Slot                                                                                                                           | Shape                                                                     |
+| ------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------- |
+| `Input`                                                                                                                        | native `<input>` props                                                    |
+| `Button`                                                                                                                       | native `<button>` props plus `variant`, `size`                            |
+| `Checkbox`                                                                                                                     | `{ checked, onCheckedChange, className }`                                 |
+| `Badge`                                                                                                                        | `{ variant, className, children }`                                        |
+| `Select`                                                                                                                       | `{ value, onValueChange, options, placeholder?, ariaLabel?, className? }` |
+| `Table`, `TableHeader`, `TableBody`, `TableRow`, `TableHead`, `TableCell`                                                      | the matching native element props                                         |
+| `DropdownMenu`, `DropdownMenuTrigger`, `DropdownMenuContent`, `DropdownMenuItem`, `DropdownMenuLabel`, `DropdownMenuSeparator` | the Radix dropdown shape                                                  |
+
+`Select` is the one slot not in upstream shape: shadcn's `Select` is a five-part
+Radix composite, and the default here is a native `<select>` so the package adds
+no dependency. Wrap yours in a small adapter to use it.
+
+### Class overrides
+
+`classNames` appends to the grid's own containers, the parts no component slot
+covers. Values merge through `tailwind-merge`, so your `h-10` displaces the
+built-in `h-8` rather than colliding with it.
+
+| Key                         | Applies to                                                |
+| --------------------------- | --------------------------------------------------------- |
+| `toolbar`                   | the search and actions row                                |
+| `search`                    | the search input                                          |
+| `filterPanel`               | the filter panel column                                   |
+| `filterGroup`               | an OR-group row                                           |
+| `filterEditor`              | the clause editor                                         |
+| `chip`                      | a filter chip                                             |
+| `valueInput`                | value inputs in the clause editor (where the widths live) |
+| `tableWrapper`              | the bordered box around the table                         |
+| `row`, `headerCell`, `cell` | table rows and cells                                      |
+| `pagination`                | the pagination row                                        |
+
+Neither slots nor classes can reorder the grid's blocks; the layout is fixed.
 
 ### URL state
 

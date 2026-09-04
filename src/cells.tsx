@@ -3,7 +3,7 @@ import { Check, X } from "lucide-react";
 import type { GridColumn } from "./core/types";
 import { formatTemporal } from "./core/format";
 import { useGridI18n } from "./messages";
-import { Badge } from "./ui/badge";
+import { useGridUi } from "./slots";
 
 function Empty() {
   return <span className="text-muted-foreground">—</span>;
@@ -12,6 +12,7 @@ function Empty() {
 /** Default cell renderer by the descriptor's ColType. */
 export function CellValue({ column, value }: { column: GridColumn; value: unknown }) {
   const { locale } = useGridI18n();
+  const { Badge } = useGridUi().components;
   if (value === null || value === undefined) return <Empty />;
   // An array column renders each element as its own element-typed cell (enum
   // elements become badges, datetimes are localized, and so on). An empty
@@ -48,7 +49,11 @@ export function CellValue({ column, value }: { column: GridColumn; value: unknow
       return <span className="font-mono text-xs">{String(value)}</span>;
     case "enum": {
       const label = column.filter?.enumValues?.find((e) => e.value === value)?.label ?? String(value);
-      return <Badge>{label}</Badge>;
+      return (
+        <Badge variant="outline" className="rounded-md">
+          {label}
+        </Badge>
+      );
     }
     case "json": {
       // jsonb arrives already parsed, so String(value) would give

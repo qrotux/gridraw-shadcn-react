@@ -1,8 +1,9 @@
 import * as React from "react";
 
-import { coerceDatetimeLocal, datetimeLocalFromIso } from "../core/coerce";
-import { Input } from "../ui/input";
+import { cn } from "../ui/cn";
 import { useGridI18n } from "../messages";
+import { useGridUi } from "../slots";
+import { coerceDatetimeLocal, datetimeLocalFromIso } from "../core/coerce";
 
 export function DatetimeValueInput({
   value,
@@ -14,6 +15,8 @@ export function DatetimeValueInput({
   step?: number; // column resolution in seconds; drives the input's precision
 }) {
   const { messages } = useGridI18n();
+  const { components, classNames } = useGridUi();
+  const { Input } = components;
   // Local state: the value on the wire is an instant in UTC, so deriving the
   // field back from it would fight the user mid-edit.
   const [raw, setRaw] = React.useState(() => datetimeLocalFromIso(value));
@@ -29,7 +32,7 @@ export function DatetimeValueInput({
       step={step}
       value={raw}
       onChange={handle}
-      className="h-8 w-auto px-2 text-sm"
+      className={cn("h-8 w-auto px-2 text-sm", classNames.valueInput)}
       aria-label={messages.value}
     />
   );

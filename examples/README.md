@@ -14,6 +14,7 @@ They assume a server that speaks the wire protocol from the root
 | [basic-react-router.tsx](basic-react-router.tsx)               | The minimal page: a query client, `useGridUrlState` from `./react-router`, `GridPage`. Plus a grid served from a non-default `basePath`.                                                            |
 | [custom-cells-and-actions.tsx](custom-cells-and-actions.tsx)   | `cellOverrides` wrapping the built-in cell, an actions column via `extraColumns` and `useGridRowId`, `extraFetch`, `useClampedTextCell`, `invalidateGridRows` after a mutation, Russian `messages`. |
 | [url-state-without-router.tsx](url-state-without-router.tsx)   | Driving the router-agnostic `useGridUrlState` from the History API, and the same hook with the state held in memory.                                                                                |
+| [own-design-system.tsx](own-design-system.tsx)                 | Passing your own shadcn components through `components`, adapting the flat `Select` contract, and `classNames` for the containers no slot covers.                                                   |
 | [testing-custom-cells.test.tsx](testing-custom-cells.test.tsx) | Testing an actions cell without mounting `GridPage`: `GridIdColumnProvider` supplies the id column `useGridRowId` reads. Runs as part of `npm test`.                                                |
 
 ## Checking them

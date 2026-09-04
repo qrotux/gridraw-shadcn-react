@@ -1,7 +1,6 @@
 import * as React from "react";
 
-import { Button } from "./ui/button";
-import { Input } from "./ui/input";
+import { cn } from "./ui/cn";
 
 import { CellValue } from "./cells";
 import { ColumnPicker, useVisibleColumns } from "./column-picker";
@@ -9,6 +8,7 @@ import { FiltersPanel, type FiltersPanelHandle } from "./filters-panel";
 import { GridIdColumnProvider } from "./grid-id-column";
 import { GridTable, type GridTableColumn } from "./grid-table";
 import { GridI18nProvider, mergeMessages, interpolate, type GridMessages } from "./messages";
+import { GridUiProvider, mergeComponents, type GridClassNames, type GridComponents } from "./slots";
 import { useGridDescriptor, useGridRows } from "./use-grid";
 import type { CellCtx, ExtraColumn, GridRow, GridState, RowsRequest } from "./core/types";
 
@@ -22,6 +22,10 @@ export type GridPageProps = {
   extraFetch?: string[];
   messages?: Partial<GridMessages>;
   locale?: string; // BCP-47, default "en-GB"
+  /** Replaces the built-in shadcn components, one slot at a time. */
+  components?: Partial<GridComponents>;
+  /** Class strings appended to the grid's own containers. */
+  classNames?: GridClassNames;
 };
 
 export function GridPage({
@@ -34,6 +38,8 @@ export function GridPage({
   extraFetch,
   messages: messagesProp,
   locale: localeProp,
+  components: componentsProp,
+  classNames,
 }: GridPageProps) {
   const { data: descriptor, isPending, error } = useGridDescriptor(name, basePath);
   const [visible, setVisible] = useVisibleColumns(name, descriptor);
@@ -41,6 +47,10 @@ export function GridPage({
   const filtersRef = React.useRef<FiltersPanelHandle>(null);
   const messages = React.useMemo(() => mergeMessages(messagesProp), [messagesProp]);
   const locale = localeProp ?? "en-GB";
+  const ui = React.useMemo(
+    () => ({ components: mergeComponents(componentsProp), classNames: classNames ?? {} }),
+    [componentsProp, classNames],
+  );
 
   // The last value this page pushed into state.q. Distinguishes the echo of
   // our own debounced update from an external change (browser back/forward,
@@ -117,48 +127,54 @@ export function GridPage({
   return (
     <GridIdColumnProvider idColumn={descriptor.idColumn}>
       <GridI18nProvider value={{ messages, locale }}>
-        <div className="space-y-3 p-4">
-          <div className="flex items-center gap-2">
-            {descriptor.search && (
-              <Input
-                value={qDraft}
-                onChange={(e) => setQDraft(e.target.value)}
-                placeholder={interpolate(messages.searchPlaceholder, {
-                  columns: descriptor.search.columns.join(", "),
-                })}
-                className="max-w-sm"
-              />
-            )}
-            <div className="ml-auto flex items-center gap-2">
-              <Button variant="outline" size="sm" onClick={() => filtersRef.current?.openAddGroup()}>
-                {messages.orGroup}
-              </Button>
-              <ColumnPicker columns={descriptor.columns} visible={visible} onChange={setVisible} />
+        <GridUiProvider value={ui}>
+          <div className="space-y-3 p-4">
+            <div className={cn("flex items-center gap-2", classNames?.toolbar)}>
+              {descriptor.search && (
+                <ui.components.Input
+                  value={qDraft}
+                  onChange={(e) => setQDraft(e.target.value)}
+                  placeholder={interpolate(messages.searchPlaceholder, {
+                    columns: descriptor.search.columns.join(", "),
+                  })}
+                  className={cn("max-w-sm", classNames?.search)}
+                />
+              )}
+              <div className="ml-auto flex items-center gap-2">
+                <ui.components.Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => filtersRef.current?.openAddGroup()}
+                >
+                  {messages.orGroup}
+                </ui.components.Button>
+                <ColumnPicker columns={descriptor.columns} visible={visible} onChange={setVisible} />
+              </div>
             </div>
+            <FiltersPanel
+              ref={filtersRef}
+              columns={descriptor.columns}
+              value={state.filters}
+              onChange={(filters) => onStateChange({ filters })}
+            />
+            <GridTable
+              columns={tableColumns}
+              rows={rowsQ.data?.rows ?? []}
+              sorts={state.sort.length ? state.sort : [descriptor.defaultSort]}
+              defaultSort={descriptor.defaultSort}
+              onSortChange={(sort) => onStateChange({ sort })}
+              onAddFilter={(key) => filtersRef.current?.openAddGroup(key)}
+              page={state.page}
+              pageCount={pageCount}
+              onPageChange={(page) => onStateChange({ page })}
+              pageSize={pageSize}
+              pageSizeOptions={descriptor.pageSizeOptions}
+              onPageSizeChange={(size) => onStateChange({ pageSize: size })}
+              isFetching={rowsQ.isFetching}
+            />
+            <div className="text-xs text-muted-foreground">{interpolate(messages.rowsTotal, { total })}</div>
           </div>
-          <FiltersPanel
-            ref={filtersRef}
-            columns={descriptor.columns}
-            value={state.filters}
-            onChange={(filters) => onStateChange({ filters })}
-          />
-          <GridTable
-            columns={tableColumns}
-            rows={rowsQ.data?.rows ?? []}
-            sorts={state.sort.length ? state.sort : [descriptor.defaultSort]}
-            defaultSort={descriptor.defaultSort}
-            onSortChange={(sort) => onStateChange({ sort })}
-            onAddFilter={(key) => filtersRef.current?.openAddGroup(key)}
-            page={state.page}
-            pageCount={pageCount}
-            onPageChange={(page) => onStateChange({ page })}
-            pageSize={pageSize}
-            pageSizeOptions={descriptor.pageSizeOptions}
-            onPageSizeChange={(size) => onStateChange({ pageSize: size })}
-            isFetching={rowsQ.isFetching}
-          />
-          <div className="text-xs text-muted-foreground">{interpolate(messages.rowsTotal, { total })}</div>
-        </div>
+        </GridUiProvider>
       </GridI18nProvider>
     </GridIdColumnProvider>
   );

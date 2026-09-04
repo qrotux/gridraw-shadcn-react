@@ -2,10 +2,8 @@ import * as React from "react";
 import { type ColumnDef, flexRender, getCoreRowModel, useReactTable } from "@tanstack/react-table";
 import { ArrowDown, ArrowUp, ChevronsUpDown, Filter } from "lucide-react";
 
-import { Button } from "./ui/button";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./ui/table";
 import { cn } from "./ui/cn";
-import { controlClass } from "./ui/control";
+import { useGridUi } from "./slots";
 
 import { useGridIdColumnOptional } from "./grid-id-column";
 import { useGridI18n } from "./messages";
@@ -141,6 +139,8 @@ export function GridTable({
   emptyMessage,
 }: GridTableProps) {
   const { messages } = useGridI18n();
+  const { components, classNames } = useGridUi();
+  const { Button, Select, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } = components;
   // The current size is always in the options, even when a page set a default
   // outside the set; otherwise <select> shows an empty value.
   const sizeOptions = React.useMemo(
@@ -200,7 +200,7 @@ export function GridTable({
           <div className={cn(col.pin === "right" && "text-right")}>{col.render(row.original)}</div>
         ),
       })),
-    [ordered, sorts, sortByKey, onSortChange, defaultSort, onAddFilter, messages],
+    [ordered, sorts, sortByKey, onSortChange, defaultSort, onAddFilter, messages, Button],
   );
 
   // getRowId keys TanStack rows by entity, not array position. Without it a
@@ -233,13 +233,13 @@ export function GridTable({
 
   return (
     <div className="space-y-2">
-      <div className={cn("rounded-md border", isFetching && "opacity-60")}>
+      <div className={cn("rounded-md border", isFetching && "opacity-60", classNames.tableWrapper)}>
         <Table>
           <TableHeader>
             {table.getHeaderGroups().map((hg) => (
-              <TableRow key={hg.id}>
+              <TableRow key={hg.id} className={classNames.row}>
                 {hg.headers.map((header) => (
-                  <TableHead key={header.id}>
+                  <TableHead key={header.id} className={classNames.headerCell}>
                     {header.isPlaceholder
                       ? null
                       : flexRender(header.column.columnDef.header, header.getContext())}
@@ -251,9 +251,9 @@ export function GridTable({
           <TableBody>
             {table.getRowModel().rows.length ? (
               table.getRowModel().rows.map((row) => (
-                <TableRow key={row.id}>
+                <TableRow key={row.id} className={classNames.row}>
                   {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id}>
+                    <TableCell key={cell.id} className={classNames.cell}>
                       {flexRender(cell.column.columnDef.cell, cell.getContext())}
                     </TableCell>
                   ))}
@@ -261,7 +261,10 @@ export function GridTable({
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={ordered.length} className="h-24 text-center text-muted-foreground">
+                <TableCell
+                  colSpan={ordered.length}
+                  className={cn("h-24 text-center text-muted-foreground", classNames.cell)}
+                >
                   {emptyMessage ?? messages.empty}
                 </TableCell>
               </TableRow>
@@ -269,22 +272,16 @@ export function GridTable({
           </TableBody>
         </Table>
       </div>
-      <div className="flex items-center justify-between gap-2">
+      <div className={cn("flex items-center justify-between gap-2", classNames.pagination)}>
         {onPageSizeChange && pageSize ? (
           <label className="flex items-center gap-1.5 text-sm text-muted-foreground">
             {messages.rowsPerPage}
-            <select
-              className={controlClass}
-              value={pageSize}
-              onChange={(e) => onPageSizeChange(Number(e.target.value))}
-              aria-label={messages.rowsPerPage}
-            >
-              {sizeOptions.map((n) => (
-                <option key={n} value={n}>
-                  {n}
-                </option>
-              ))}
-            </select>
+            <Select
+              value={String(pageSize)}
+              onValueChange={(v) => onPageSizeChange(Number(v))}
+              options={sizeOptions.map((n) => ({ value: String(n), label: String(n) }))}
+              ariaLabel={messages.rowsPerPage}
+            />
           </label>
         ) : (
           <span />

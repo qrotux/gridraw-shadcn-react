@@ -1,15 +1,14 @@
 import * as React from "react";
 import { X } from "lucide-react";
 
-import { Badge } from "./ui/badge";
-import { Button } from "./ui/button";
-import { controlClass } from "./ui/control";
+import { cn } from "./ui/cn";
 
 import { ValueInput } from "./filter-inputs";
 import { opArity } from "./core/arity";
 import { buildClause, canCommitClause, defaultOp, keepsValueShape } from "./core/clause";
 import { clauseLabel } from "./core/clause-label";
 import { useGridI18n } from "./messages";
+import { useGridUi } from "./slots";
 import type { FilterClause, FilterOp, GridColumn } from "./core/types";
 
 // ---------------------------------------------------------------------------
@@ -30,6 +29,8 @@ function ClauseEditor({
   onCancel: () => void;
 }) {
   const { messages } = useGridI18n();
+  const { components, classNames } = useGridUi();
+  const { Button, Select } = components;
   const filterable = React.useMemo(() => columns.filter((c) => c.filter), [columns]);
   // initialField seeds only a filterable column; op is that column's default.
   const seedCol = initialField ? filterable.find((c) => c.key === initialField) : undefined;
@@ -70,34 +71,27 @@ function ClauseEditor({
   }
 
   return (
-    <div className="flex flex-wrap items-center gap-2 rounded-md border border-dashed p-2">
-      <select
+    <div
+      // The editor replaces the "+ Filter" button and everything in it is h-8,
+      // like that button, so it carries no vertical padding and the group's
+      // height never changes when it opens.
+      className={cn("flex flex-wrap items-center gap-2", classNames.filterEditor)}
+    >
+      <Select
         value={field}
-        onChange={(e) => selectField(e.target.value)}
-        className={controlClass}
-        aria-label={messages.columnAria}
-      >
-        <option value="">{messages.columnPlaceholder}</option>
-        {filterable.map((c) => (
-          <option key={c.key} value={c.key}>
-            {c.title}
-          </option>
-        ))}
-      </select>
+        onValueChange={selectField}
+        placeholder={messages.columnPlaceholder}
+        options={filterable.map((c) => ({ value: c.key, label: c.title }))}
+        ariaLabel={messages.columnAria}
+      />
 
       {column && (
-        <select
+        <Select
           value={op}
-          onChange={(e) => selectOp(e.target.value)}
-          className={controlClass}
-          aria-label={messages.operatorAria}
-        >
-          {operators.map((o) => (
-            <option key={o.op} value={o.op}>
-              {o.label}
-            </option>
-          ))}
-        </select>
+          onValueChange={selectOp}
+          options={operators.map((o) => ({ value: o.op, label: o.label }))}
+          ariaLabel={messages.operatorAria}
+        />
       )}
 
       {column && op !== "" && !noValue && (
@@ -113,7 +107,7 @@ function ClauseEditor({
       <Button size="sm" onClick={commit} disabled={!canCommit}>
         {initial ? messages.save : messages.add}
       </Button>
-      <Button size="sm" variant="ghost" onClick={onCancel}>
+      <Button size="sm" variant="outline" onClick={onCancel}>
         {messages.cancel}
       </Button>
     </div>
@@ -136,8 +130,10 @@ function Chip({
   onRemove: () => void;
 }) {
   const { messages, locale } = useGridI18n();
+  const { components, classNames } = useGridUi();
+  const { Badge } = components;
   return (
-    <Badge variant="chip">
+    <Badge variant="secondary" className={cn("border-border", classNames.chip)}>
       <button
         type="button"
         aria-label={messages.editClauseAria}
@@ -187,11 +183,13 @@ function GroupRow({
   onCancel: () => void;
 }) {
   const { messages } = useGridI18n();
+  const { components, classNames } = useGridUi();
+  const { Button } = components;
   const appendOpen = editing?.kind === "append" && editing.groupIndex === groupIndex;
   const editorOpenHere =
     (editing?.kind === "append" || editing?.kind === "edit") && editing.groupIndex === groupIndex;
   return (
-    <div className="flex flex-wrap items-center gap-2 rounded-md border p-2">
+    <div className={cn("flex flex-wrap items-center gap-2 rounded-md border p-2", classNames.filterGroup)}>
       {group.map((clause, ci) => {
         const editOpen =
           editing?.kind === "edit" && editing.groupIndex === groupIndex && editing.clauseIndex === ci;
@@ -212,7 +210,7 @@ function GroupRow({
         <ClauseEditor columns={columns} onCommit={onCommit} onCancel={onCancel} />
       ) : (
         !editorOpenHere && (
-          <Button variant="ghost" size="sm" onClick={onOpenAppend}>
+          <Button variant="outline" size="sm" onClick={onOpenAppend}>
             {messages.filter}
           </Button>
         )
@@ -240,6 +238,7 @@ export const FiltersPanel = React.forwardRef<
   }
 >(function FiltersPanel({ columns, value, onChange }, ref) {
   const { messages } = useGridI18n();
+  const { classNames } = useGridUi();
   const [editing, setEditing] = React.useState<EditTarget | null>(null);
 
   React.useImperativeHandle(
@@ -274,7 +273,7 @@ export const FiltersPanel = React.forwardRef<
   }
 
   return (
-    <div className="flex flex-col gap-2">
+    <div className={cn("flex flex-col gap-2", classNames.filterPanel)}>
       {value.map((group, gi) => (
         <React.Fragment key={gi}>
           {gi > 0 && <div className="text-xs font-medium text-muted-foreground">{messages.or}</div>}

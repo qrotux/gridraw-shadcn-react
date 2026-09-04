@@ -5,6 +5,13 @@ export { GridPage, type GridPageProps } from "./grid-page";
 export { useGridUrlState } from "./use-grid-url-state";
 export { invalidateGridRows } from "./use-grid";
 export { defaultGridMessages, type GridMessages } from "./messages";
+export {
+  defaultGridComponents,
+  type GridComponents,
+  type GridClassNames,
+  type GridSelectProps,
+  type SelectOption,
+} from "./slots";
 export { useClampedTextCell, type ClampedTextCellOptions } from "./clamped-text-cell";
 export { GridIdColumnProvider, useGridIdColumn, useGridRowId } from "./grid-id-column";
 

@@ -1,9 +1,9 @@
 import * as React from "react";
 import { ChevronsUpDown, X } from "lucide-react";
 
-import { Badge } from "../ui/badge";
 import { cn } from "../ui/cn";
 import { useGridI18n } from "../messages";
+import { useGridUi } from "../slots";
 import type { EnumValue } from "../core/types";
 
 // Enum multi-value entry as a select-style combobox: selected values show as
@@ -23,6 +23,8 @@ export function EnumTagInput({
   strict: boolean;
 }) {
   const { messages } = useGridI18n();
+  const { components, classNames } = useGridUi();
+  const { Badge } = components;
   // Memoized so the matches useMemo below is not invalidated every render by a
   // fresh `[]` when value is undefined.
   const selected = React.useMemo<string[]>(() => (Array.isArray(value) ? (value as string[]) : []), [value]);
@@ -78,9 +80,17 @@ export function EnumTagInput({
 
   return (
     <div ref={rootRef} className="relative">
-      <div className="flex min-h-8 w-56 flex-wrap items-center gap-1 rounded-md border border-input bg-transparent px-2 py-0.5 shadow-sm">
+      {/* The real focus target is the inner input, so the ring lives on the
+          wrapper via focus-within; the classes are Input's, with focus-visible
+          swapped for focus-within. */}
+      <div
+        className={cn(
+          "flex min-h-8 w-56 flex-wrap items-center gap-1 rounded-md border border-input bg-transparent px-2 py-0.5 shadow-xs transition-[color,box-shadow] outline-none focus-within:border-ring focus-within:ring-[3px] focus-within:ring-ring/50 dark:bg-input/30",
+          classNames.valueInput,
+        )}
+      >
         {selected.map((v, i) => (
-          <Badge key={i} variant="chip">
+          <Badge key={i} variant="secondary" className={cn("border-border", classNames.chip)}>
             {labelOf(v)}
             <button
               type="button"

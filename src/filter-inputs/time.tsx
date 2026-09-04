@@ -1,6 +1,7 @@
-import { coerceText } from "../core/coerce";
-import { Input } from "../ui/input";
+import { cn } from "../ui/cn";
 import { useGridI18n } from "../messages";
+import { useGridUi } from "../slots";
+import { coerceText } from "../core/coerce";
 
 // A native time picker. `step` (seconds) sets the granularity and whether the
 // seconds field appears; the input's value ("HH:MM" or "HH:MM:SS") is already
@@ -15,13 +16,15 @@ export function TimeValueInput({
   step?: number;
 }) {
   const { messages } = useGridI18n();
+  const { components, classNames } = useGridUi();
+  const { Input } = components;
   return (
     <Input
       type="time"
       step={step}
       value={typeof value === "string" ? value : ""}
       onChange={(e) => onChange(coerceText(e.target.value))}
-      className="h-8 w-auto px-2 text-sm"
+      className={cn("h-8 w-auto px-2 text-sm", classNames.valueInput)}
       aria-label={messages.value}
     />
   );

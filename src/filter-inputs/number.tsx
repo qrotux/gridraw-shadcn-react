@@ -1,8 +1,9 @@
 import * as React from "react";
 
-import { coerceNumber } from "../core/coerce";
-import { Input } from "../ui/input";
+import { cn } from "../ui/cn";
 import { useGridI18n } from "../messages";
+import { useGridUi } from "../slots";
+import { coerceNumber } from "../core/coerce";
 
 export function NumberValueInput({
   value,
@@ -12,6 +13,8 @@ export function NumberValueInput({
   onChange: (v: number | undefined) => void;
 }) {
   const { messages } = useGridI18n();
+  const { components, classNames } = useGridUi();
+  const { Input } = components;
   // The typed text is local state: coercion drops what is not yet a number
   // ("-", "1e"), and re-deriving the field from the coerced value would erase
   // those keystrokes.
@@ -23,6 +26,12 @@ export function NumberValueInput({
   }
 
   return (
-    <Input type="number" value={raw} onChange={handle} placeholder={messages.number} className="h-8 w-28" />
+    <Input
+      type="number"
+      value={raw}
+      onChange={handle}
+      placeholder={messages.number}
+      className={cn("h-8 w-28", classNames.valueInput)}
+    />
   );
 }

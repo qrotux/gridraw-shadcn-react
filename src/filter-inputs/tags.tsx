@@ -3,9 +3,9 @@ import { X } from "lucide-react";
 
 import { coerceElement } from "../core/coerce";
 import type { ColType } from "../core/types";
-import { Badge } from "../ui/badge";
-import { Input } from "../ui/input";
+import { cn } from "../ui/cn";
 import { useGridI18n } from "../messages";
+import { useGridUi } from "../slots";
 
 // Free multi-value entry for columns with no enum list (a uuid `in`, and
 // non-enum array columns). A token is added with Enter or comma; Backspace on
@@ -21,6 +21,8 @@ export function TagValueInput({
   onChange: (v: unknown) => void;
 }) {
   const { messages } = useGridI18n();
+  const { components, classNames } = useGridUi();
+  const { Badge, Input } = components;
   const tags = Array.isArray(value) ? (value as unknown[]) : [];
   const [draft, setDraft] = React.useState("");
 
@@ -41,7 +43,7 @@ export function TagValueInput({
   return (
     <div className="flex flex-wrap items-center gap-1">
       {tags.map((t, i) => (
-        <Badge key={i} variant="chip">
+        <Badge key={i} variant="secondary" className={cn("border-border", classNames.chip)}>
           {String(t)}
           <button
             type="button"
@@ -65,7 +67,7 @@ export function TagValueInput({
           }
         }}
         placeholder={messages.value}
-        className="h-8 w-40"
+        className={cn("h-8 w-40", classNames.valueInput)}
       />
     </div>
   );

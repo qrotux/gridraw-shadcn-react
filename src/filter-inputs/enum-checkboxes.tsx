@@ -1,4 +1,4 @@
-import { Checkbox } from "../ui/checkbox";
+import { useGridUi } from "../slots";
 import type { EnumValue } from "../core/types";
 
 export function EnumValueInput({
@@ -10,6 +10,7 @@ export function EnumValueInput({
   value: unknown;
   onChange: (v: unknown) => void;
 }) {
+  const { Checkbox } = useGridUi().components;
   const selected = Array.isArray(value) ? (value as string[]) : [];
 
   function toggle(v: string, checked: boolean) {
